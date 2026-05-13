@@ -125,10 +125,10 @@ function init() {
      };
 
 
-　const fujilive = createGeoCsv('data/zetubou.csv', '');
+　//const fujilive = createGeoCsv('data/zetubou.csv', '');
 
 　const overlays = {
-        "富士山ライブカメラ": fujilive,
+        "富士山ライブカメラ": createGeoCsv('data/zetubou.csv', ''),
     };
 
  // fujilive.addTo(map); // ★ デフォルトON
