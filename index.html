@@ -86,13 +86,19 @@ function init() {
 
             pointToLayer: (feature, latlng) => {
                 return L.marker(latlng, {
-                    icon: L.icon({
-                        iconUrl: feature.properties.icon || defaultIcon,
-                        shadowUrl: 'marker/shadow.png',
-                        iconSize: [25, 41],
-                        iconAnchor: [10, 43],
-                        shadowSize: [41, 41],
-                        shadowAnchor: [10, 43]
+                    //icon: L.icon({
+                       // iconUrl: feature.properties.icon || defaultIcon,
+                       // shadowUrl: 'marker/shadow.png',
+                       // iconSize: [25, 41],
+                       // iconAnchor: [10, 43],
+                       // shadowSize: [41, 41],
+                       // shadowAnchor: [10, 43]
+                   // })
+              //アイコンはフラッシュするアイコンを使用
+                    icon:L.icon.pulse({
+                        iconSize: [5,5],
+                        iconAnchor: [3, 3],
+                        color:'#000000'
                     })
                 });
             }
