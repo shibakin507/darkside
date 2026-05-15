@@ -17,7 +17,6 @@ content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable
 <style> body{background-color: #000000;} </style>
 
 <style>
-
 /* =============================
    基本レイアウト
 ============================= */
@@ -30,27 +29,27 @@ html, body, #mapcontainer {
    ポップアップデザイン
 ============================= */
 
-/* ポップアップの吹き出し三角部分 */
-.leaflet-popup-tip {
-    background: red;
-    border: 2px solid black;
-}
-   
 /* ポップアップ本体 */
 .leaflet-popup-content-wrapper {
     background: red;          /* 背景色 */
     color: black;             /* 文字色 */
     border: 2px solid black;  /* 枠線 */
     border-radius: 10px;
+  　box-shadow: none;
 }
 
-
+/* ポップアップの吹き出し三角部分 */
+.leaflet-popup-tip {
+    background: red;
+    border: none;
+    box-shadow: 0 0 0 2px black;
+}
 
 /* ポップアップ内文字 */
 .leaflet-popup-content {
     color: black;
 }
-
+   
 </style>
    
 
