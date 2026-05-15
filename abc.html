@@ -15,8 +15,18 @@ content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable
 <script src="dist/L.Icon.Pulse.js"></script>
 <link rel="stylesheet" href="dist/L.Icon.Pulse.css" />
 
-<!-- ポップアップのスタイル -->
+
 <style>
+/* =============================
+   基本レイアウト
+============================= */
+html, body, #mapcontainer {
+    height: 100%;
+    margin: 0;
+}
+
+<!-- ポップアップのスタイル -->
+
 
 /* ポップアップ本体 */
 .leaflet-popup-content-wrapper {
@@ -53,7 +63,12 @@ a.leaflet-popup-close-button {
     box-shadow: none;
 }
 
+
+    
 </style>
+
+
+
 
 </head>
 
@@ -225,6 +240,7 @@ map.on("popupopen", function(e) {
 
         img.onclick = () => openImage(img.src);
 
+        // 👇 既に説明が無ければ自動追加
         if (!popupEl.querySelector(".tap-hint")) {
             const hint = document.createElement("div");
             hint.className = "tap-hint";
@@ -274,4 +290,3 @@ map.on("popupopen", function(e) {
 
 </body>
 </html>
-
