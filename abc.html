@@ -16,40 +16,44 @@ content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable
 <link rel="stylesheet" href="dist/L.Icon.Pulse.css" />
 <style> body{background-color: #000000;} </style>
 
+<!-- ポップアップのスタイル -->
 <style>
-/* =============================
-   基本レイアウト
-============================= */
-html, body, #mapcontainer {
-    height: 100%;
-    margin: 0;
-}
-
-/* =============================
-   ポップアップデザイン
-============================= */
 
 /* ポップアップ本体 */
 .leaflet-popup-content-wrapper {
-    background: red;          /* 背景色 */
-    color: black;             /* 文字色 */
-    border: 2px solid black;  /* 枠線 */
-    border-radius: 10px;
-  　box-shadow: none;
+    background: red;
+    border: 3px solid black;
+    box-shadow: none;
 }
 
-/* ポップアップの吹き出し三角部分 */
+/* ポップアップ文字 */
+.leaflet-popup-content,
+a.leaflet-popup-close-button {
+    color: black !important;
+    font: bold 14pt monospace;
+}
+
+/* 三角部分コンテナ */
+.leaflet-popup-tip-container {
+    margin-top: -3px;
+    height: 23px;
+    overflow: visible;
+}
+
+/* 三角部分 */
 .leaflet-popup-tip {
     background: red;
-    border: none;
-    box-shadow: 0 0 0 2px black;
+
+    border-style: solid;
+
+    /* 上と左を消す */
+    border-width: 0 3px 3px 0;
+
+    border-color: black;
+
+    box-shadow: none;
 }
 
-/* ポップアップ内文字 */
-.leaflet-popup-content {
-    color: black;
-}
-   
 </style>
    
 
