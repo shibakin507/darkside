@@ -98,7 +98,9 @@ function init() {
             fieldSeparator: ',',
 
             onEachFeature: (feature, layer) => {
-                layer.bindPopup(feature.properties.popup);
+                layer.bindPopup(feature.properties.popup, {
+    　　　　　　　　　maxWidth: 400  //ポップアップ最大幅
+　　　　　　　　　});
             },
 
             pointToLayer: (feature, latlng) => {
