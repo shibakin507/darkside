@@ -103,14 +103,6 @@ function init() {
 
             pointToLayer: (feature, latlng) => {
                 return L.marker(latlng, {
-                    //icon: L.icon({
-                       // iconUrl: feature.properties.icon || defaultIcon,
-                       // shadowUrl: 'marker/shadow.png',
-                       // iconSize: [25, 41],
-                       // iconAnchor: [10, 43],
-                       // shadowSize: [41, 41],
-                       // shadowAnchor: [10, 43]
-                   // })
                     //アイコンはフラッシュするアイコンを使用
                     icon:L.icon.pulse({
                         iconSize: [10,10],
@@ -132,16 +124,6 @@ function init() {
 
         return layer;
     }
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -196,8 +178,7 @@ function closeImage() {
     document.getElementById("imageModal").style.display = "none";
 }
 
-
-
+   
 // すべてのポップアップ画像をモーダル対応にする
 map.on("popupopen", function(e) {
 
@@ -211,8 +192,7 @@ map.on("popupopen", function(e) {
         img.style.cursor = "pointer";
 
         img.onclick = () => openImage(img.src);
-
-        // 👇 既に説明が無ければ自動追加
+    
         if (!popupEl.querySelector(".tap-hint")) {
             const hint = document.createElement("div");
             hint.className = "tap-hint";
