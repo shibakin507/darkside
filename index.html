@@ -48,6 +48,10 @@ a.leaflet-popup-close-button { color: red !important; font: bold 10pt monospace;
    
 <div id="mapcontainer"></div>
 
+<audio id="bgm" loop>
+    <source src="music/bgm.mp3" type="audio/mpeg">
+</audio>
+   
 <script>
 /* ==========================================================
    グローバル変数
@@ -140,9 +144,21 @@ function init() {
      };
 
 　const makaihantenchi = createGeoCsv('data/zetubou.csv', '');
+   
+/* ---------- 音楽ON/OFF用 疑似レイヤー ---------- */
+　const musicLayer = L.layerGroup();
+　musicLayer.on("add", function () {
+    　document.getElementById("bgm").play();
+　});
+　musicLayer.on("remove", function () {
+    　document.getElementById("bgm").pause();
+　});
+　document.getElementById("bgm").volume = 0.3; //音量調整
+   
 　const overlays = {
         　"魔界地形図": gsirehillshademap,
     　　　"反転地を示す": makaihantenchi,
+    　　　"音楽再生": musicLayer,
     };
    gsirehillshademap.addTo(map); // ★ デフォルトON
    makaihantenchi.addTo(map); // ★ デフォルトON
