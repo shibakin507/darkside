@@ -134,13 +134,14 @@ function init() {
 
 　const makaihantenchi = createGeoCsv('data/zetubou.csv', '');
 　const overlays = {
-        "魔界反転地を示す": makaihantenchi,
+        　"魔界地形図": gsirehillshademap,
+    　　　"反転地を示す": makaihantenchi,
         //"色別標高図": gsirelief,
-        "陰影起伏図": gsirehillshademap,
     };
+   gsirehillshademap.addTo(map); // ★ デフォルトON
    makaihantenchi.addTo(map); // ★ デフォルトON
    //gsirelief.addTo(map); // ★ デフォルトON
-   gsirehillshademap.addTo(map); // ★ デフォルトON
+  
 
 
 /* ======================================================
