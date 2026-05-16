@@ -4,9 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport"
 content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-
-<title>名無し</title>
-
+<title>????</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
@@ -72,15 +70,14 @@ function init() {
     //クレジット表記
     var gsiattr = "｜<a href='https://maps.gsi.go.jp/development/ichiran.html' target='_blank'>地理院タイル</a>";
     var osmattr = "<a href='https://www.openstreetmap.org/copyright' target='_blank'>OpenStreetMap｜<a href='http://fujisanwalker.blog.fc2.com/' target='_blank'>富士山Walker</a>";
-　　//var gsiattr = "<a href='https://maps.gsi.go.jp/development/ichiran.html' target='_blank'>地理院タイル</a>｜<a href='https://www.openstreetmap.org/copyright' target='_blank'>OpenStreetMap｜<a href='http://fujisanwalker.blog.fc2.com/' target='_blank'>富士山Walker</a>｜"; //　宣伝
-　　//地図タイル
+　　
+   //地図タイル（openstreetmap）
 　　const osm = L.tileLayer(
         'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
         { attribution: osmattr , maxZoom: 18 }
     ).addTo(map);　//デフォルト表示
 
     /* ---------- オーバーレイ地図 ---------- */
-    //const gsirelief = L.tileLayer('http://cyberjapandata.gsi.go.jp/xyz/relief/{z}/{x}/{y}.png', { opacity: 0.8, maxNativeZoom: 15, attribution: gsiattr }); //色別標高図
     const gsirehillshademap = L.tileLayer('http://cyberjapandata.gsi.go.jp/xyz/hillshademap/{z}/{x}/{y}.png',
          { opacity: 0.9, maxNativeZoom: 16, attribution: gsiattr }); // 陰影起伏図
        
@@ -146,15 +143,13 @@ function init() {
 　const overlays = {
         　"魔界地形図": gsirehillshademap,
     　　　"反転地を示す": makaihantenchi,
-        //"色別標高図": gsirelief,
     };
    gsirehillshademap.addTo(map); // ★ デフォルトON
    makaihantenchi.addTo(map); // ★ デフォルトON
-   //gsirelief.addTo(map); // ★ デフォルトON
-  
+     
 //////////////////////////緯度経度pluginの設定/////////////////////
 map.on('mousemove', onMapMousemove);
-      //左上にdivコントロールを表示
+      //左下にdivコントロールを表示
       var latloninfo = L.control({ position: "bottomleft" });
       latloninfo.onAdd = function (map) {
         //divを作成
@@ -176,7 +171,7 @@ function onMapMousemove(e) {
       box.innerHTML = html;
       box.style.visibility = "visible";
     }
-//////////////////////////緯度経度pluginの設定/////////////////////
+//////////////////////////緯度経度pluginの設定おわり/////////////////////
 
 /* ======================================================
        UIコンテナ配置
@@ -217,18 +212,12 @@ function closeImage() {
    
 // すべてのポップアップ画像をモーダル対応にする
 map.on("popupopen", function(e) {
-
     const popupEl = e.popup.getElement();
     if (!popupEl) return;
-
     const images = popupEl.querySelectorAll("img");
-
     images.forEach(img => {
-
         img.style.cursor = "pointer";
-
         img.onclick = () => openImage(img.src);
-    
         if (!popupEl.querySelector(".tap-hint")) {
             const hint = document.createElement("div");
             hint.className = "tap-hint";
@@ -237,17 +226,12 @@ map.on("popupopen", function(e) {
             hint.style.textAlign = "center";
             hint.style.marginTop = "4px";
             hint.innerText = "※タップで画像が拡大";
-
             img.parentNode.appendChild(hint);
         }
     });
 });
 
-
-
 </script>
-
-
 
 <div id="imageModal" style="
     display:none;
@@ -273,8 +257,6 @@ map.on("popupopen", function(e) {
         border-radius:10px;
     ">
 </div>
-
-
 
 </body>
 </html>
