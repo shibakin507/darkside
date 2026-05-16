@@ -72,7 +72,7 @@ function init() {
     /* ---------- オーバーレイ地図 ---------- */
     const gsirelief = L.tileLayer('http://cyberjapandata.gsi.go.jp/xyz/relief/{z}/{x}/{y}.png', { opacity: 0.8, maxNativeZoom: 15, attribution: gsiattr }); //色別標高図
     const gsirehillshademap = L.tileLayer('http://cyberjapandata.gsi.go.jp/xyz/hillshademap/{z}/{x}/{y}.png',
-         { opacity: 0.8, maxNativeZoom: 16, attribution: gsiattr }); // 陰影起伏図
+         { opacity: 0.9, maxNativeZoom: 16, attribution: gsiattr }); // 陰影起伏図
        
     /* ---------- オーバーレイ画像 ---------- */
     /* ----------
@@ -139,7 +139,7 @@ function init() {
         "陰影起伏図": gsirehillshademap,
     };
    makaihantenchi.addTo(map); // ★ デフォルトON
-   gsirelief.addTo(map); // ★ デフォルトON
+   //gsirelief.addTo(map); // ★ デフォルトON
    gsirehillshademap.addTo(map); // ★ デフォルトON
 
 
