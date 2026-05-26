@@ -48,9 +48,7 @@ a.leaflet-popup-close-button { color: red !important; font: bold 10pt monospace;
    
 <div id="mapcontainer"></div>
 
-<audio id="bgm" loop>
-    <source src="data/bgm.mp3" type="audio/mpeg">
-</audio>
+<audio id="bgm" loop></audio>
    
 <script>
 /* ==========================================================
@@ -145,21 +143,87 @@ function init() {
 
 　const makaihantenchi = createGeoCsv('data/zetubou.csv', '');
    
-/* ---------- 音楽ON/OFF用 疑似レイヤー ---------- */
-　const musicLayer = L.layerGroup();
-　musicLayer.on("add", function () {
-    　document.getElementById("bgm").play();
-　});
-　musicLayer.on("remove", function () {
-    　document.getElementById("bgm").pause();
-　});
-　document.getElementById("bgm").volume = 1.0; //音量調整　0～1.0
+/* ---------- BGM用 audio取得 ---------- */
+const bgm = document.getElementById("bgm");
+
+/* ---------- BGM再生関数 ---------- */
+function playBGM(src) {
+    bgm.src = src;
+    bgm.play();
+}
+
+/* ---------- BGM停止関数 ---------- */
+function stopBGM() {
+    bgm.pause();
+}
+
+/* ---------- BGM1 ---------- */
+const bgmLayer1 = L.layerGroup();
+
+bgmLayer1.on("add", function () {
+
+    // 他のBGMをOFF
+    if (map.hasLayer(bgmLayer2)) map.removeLayer(bgmLayer2);
+    if (map.hasLayer(bgmLayer3)) map.removeLayer(bgmLayer3);
+
+    playBGM("data/bgm1.mp3");
+});
+
+bgmLayer1.on("remove", function () {
+
+    // 自分が再生中なら停止
+    if (bgm.src.includes("bgm1.mp3")) {
+        stopBGM();
+    }
+});
+
+/* ---------- BGM2 ---------- */
+const bgmLayer2 = L.layerGroup();
+
+bgmLayer2.on("add", function () {
+
+    if (map.hasLayer(bgmLayer1)) map.removeLayer(bgmLayer1);
+    if (map.hasLayer(bgmLayer3)) map.removeLayer(bgmLayer3);
+
+    playBGM("data/bgm2.mp3");
+});
+
+bgmLayer2.on("remove", function () {
+
+    if (bgm.src.includes("bgm2.mp3")) {
+        stopBGM();
+    }
+});
+
+/* ---------- BGM3 ---------- */
+const bgmLayer3 = L.layerGroup();
+
+bgmLayer3.on("add", function () {
+
+    if (map.hasLayer(bgmLayer1)) map.removeLayer(bgmLayer1);
+    if (map.hasLayer(bgmLayer2)) map.removeLayer(bgmLayer2);
+
+    playBGM("data/bgm3.mp3");
+});
+
+bgmLayer3.on("remove", function () {
+
+    if (bgm.src.includes("bgm3.mp3")) {
+        stopBGM();
+    }
+});
+
+/* ---------- 音量 ---------- */
+bgm.volume = 1.0;
    
-　const overlays = {
-        　"魔界の地形図": gsirehillshademap,
-    　　　"反転地を示す": makaihantenchi,
-    　　　"BGMを再生": musicLayer,
-    };
+　 const overlays = {
+    "魔界の地形図": gsirehillshademap,
+    "反転地を示す": makaihantenchi,
+
+    "BGM1": bgmLayer1,
+    "BGM2": bgmLayer2,
+    "BGM3": bgmLayer3
+   };
    gsirehillshademap.addTo(map); // ★ デフォルトON
    makaihantenchi.addTo(map); // ★ デフォルトON
      
