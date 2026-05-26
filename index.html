@@ -139,48 +139,67 @@ function init() {
 
 　const makaihantenchi = createGeoCsv('data/zetubou.csv', '');
 
-/////////////////////BGMを鳴らす/////////////////////
-/* ---------- BGM用 audio取得 ---------- */
-const bgm = document.getElementById("bgm");
+/* ==========================================================
+   BGM関連
+========================================================== */
 
-/* ---------- BGM再生関数 ---------- */
+/* ---------- audio ---------- */
+const bgm = document.getElementById("bgm");
+bgm.volume = 1.0;
+
+/* ---------- 再生 ---------- */
 function playBGM(src) {
     bgm.src = src;
     bgm.play();
 }
 
-/* ---------- BGM停止関数 ---------- */
+/* ---------- 停止 ---------- */
 function stopBGM() {
     bgm.pause();
 }
 
-/* ---------- BGM1 ---------- */
+/* ---------- BGMレイヤー ---------- */
 const bgmLayer1 = L.layerGroup();
+const bgmLayer2 = L.layerGroup();
+const bgmLayer3 = L.layerGroup();
 
+/* ---------- 他BGMをOFF ---------- */
+function clearOtherBGM(activeLayer) {
+
+    const bgmLayers = [
+        bgmLayer1,
+        bgmLayer2,
+        bgmLayer3
+    ];
+
+    bgmLayers.forEach(layer => {
+
+        if (layer !== activeLayer && map.hasLayer(layer)) {
+            map.removeLayer(layer);
+        }
+
+    });
+}
+
+/* ---------- BGM1 ---------- */
 bgmLayer1.on("add", function () {
 
-    // 他のBGMをOFF
-    if (map.hasLayer(bgmLayer2)) map.removeLayer(bgmLayer2);
-    if (map.hasLayer(bgmLayer3)) map.removeLayer(bgmLayer3);
+    clearOtherBGM(bgmLayer1);
 
     playBGM("data/bgm1.mp3");
 });
 
 bgmLayer1.on("remove", function () {
 
-    // 自分が再生中なら停止
     if (bgm.src.includes("bgm1.mp3")) {
         stopBGM();
     }
 });
 
 /* ---------- BGM2 ---------- */
-const bgmLayer2 = L.layerGroup();
-
 bgmLayer2.on("add", function () {
 
-    if (map.hasLayer(bgmLayer1)) map.removeLayer(bgmLayer1);
-    if (map.hasLayer(bgmLayer3)) map.removeLayer(bgmLayer3);
+    clearOtherBGM(bgmLayer2);
 
     playBGM("data/bgm2.mp3");
 });
@@ -193,12 +212,9 @@ bgmLayer2.on("remove", function () {
 });
 
 /* ---------- BGM3 ---------- */
-const bgmLayer3 = L.layerGroup();
-
 bgmLayer3.on("add", function () {
 
-    if (map.hasLayer(bgmLayer1)) map.removeLayer(bgmLayer1);
-    if (map.hasLayer(bgmLayer2)) map.removeLayer(bgmLayer2);
+    clearOtherBGM(bgmLayer3);
 
     playBGM("data/bgm3.mp3");
 });
@@ -210,11 +226,7 @@ bgmLayer3.on("remove", function () {
     }
 });
 
-/* ---------- 音量 ---------- */
-bgm.volume = 1.0;
-/////////////////////BGMを鳴らす（終わり）/////////////////////  
-
-
+   
 /* ---------- レイヤーコンテナの中身 ------------- */
 
    const baseMaps = {
