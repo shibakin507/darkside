@@ -64,9 +64,7 @@ function init() {
     /* ---------- 地図生成 ---------- */
     map = L.map('mapcontainer', {
         zoomControl: false,
-        rotate: true,
-        bearing: 0
-    }).setView([35.26188, 138.67115], 12);
+   }).setView([35.26188, 138.67115], 12);
 
     /* ---------- ベース地図 ---------- */
     //クレジット表記
@@ -80,7 +78,7 @@ function init() {
     ).addTo(map);　//デフォルト表示
 
     /* ---------- オーバーレイ地図 ---------- */
-    const gsirehillshademap = L.tileLayer('http://cyberjapandata.gsi.go.jp/xyz/hillshademap/{z}/{x}/{y}.png',
+    const gsirehillshademap = L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/hillshademap/{z}/{x}/{y}.png',
          { opacity: 0.9, maxNativeZoom: 16, attribution: gsiattr }); // 陰影起伏図
        
     /* ---------- オーバーレイ画像 ---------- */
@@ -211,7 +209,7 @@ bgmLayer3.on("remove", function () {
    makaihantenchi.addTo(map); // ★ デフォルトON
      
 //////////////////////////緯度経度pluginの設定/////////////////////
-map.on('mousemove', onMapMousemove);
+map.on('mousemove touchmove', onMapMousemove);
       //左下にdivコントロールを表示
       var latloninfo = L.control({ position: "bottomleft" });
       latloninfo.onAdd = function (map) {
