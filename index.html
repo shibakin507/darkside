@@ -135,14 +135,11 @@ function init() {
 
 
 
-/* ---------- レイヤーコンテナの中身 ------------- */
 
-  const baseMaps = {
-//        "OpenStreetMap": osm,
-     };
 
 　const makaihantenchi = createGeoCsv('data/zetubou.csv', '');
-   
+
+/////////////////////BGMを鳴らす/////////////////////
 /* ---------- BGM用 audio取得 ---------- */
 const bgm = document.getElementById("bgm");
 
@@ -215,14 +212,20 @@ bgmLayer3.on("remove", function () {
 
 /* ---------- 音量 ---------- */
 bgm.volume = 1.0;
-   
+/////////////////////BGMを鳴らす（終わり）/////////////////////  
+
+
+/* ---------- レイヤーコンテナの中身 ------------- */
+
+   const baseMaps = {
+     "BGM1": bgmLayer1,
+     "BGM2": bgmLayer2,
+     "BGM3": bgmLayer3
+     };
+
 　 const overlays = {
     "魔界の地形図": gsirehillshademap,
     "反転地を示す": makaihantenchi,
-
-    "BGM1": bgmLayer1,
-    "BGM2": bgmLayer2,
-    "BGM3": bgmLayer3
    };
    gsirehillshademap.addTo(map); // ★ デフォルトON
    makaihantenchi.addTo(map); // ★ デフォルトON
