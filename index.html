@@ -153,6 +153,10 @@ function stopBGM() {
     bgm.pause();
 }
 
+/* ---------- BGM0 ---------- */
+const bgmLayer0 = L.layerGroup();
+
+   
 /* ---------- BGM1 ---------- */
 const bgmLayer1 = L.layerGroup();
 
@@ -216,7 +220,7 @@ bgm.volume = 1.0;
 /* ---------- レイヤーコンテナの中身 ------------- */
 
   const baseMaps = {
-    //"BGMを消す": ,
+    "BGMを消す":bgmLayer0 ,
     "BGM1": bgmLayer1,
     "BGM2": bgmLayer2,
     "BGM3": bgmLayer3,
