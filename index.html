@@ -69,7 +69,7 @@ function init() {
     //クレジット表記
     var gsiattr = "｜<a href='https://maps.gsi.go.jp/development/ichiran.html' target='_blank'>地理院タイル</a>";
     var osmattr = "<a href='https://www.openstreetmap.org/copyright' target='_blank'>OpenStreetMap｜<a href='http://fujisanwalker.blog.fc2.com/' target='_blank'>富士山Walker</a>";
-　　
+
     //地図タイル（openstreetmap）
    const osm = L.tileLayer(
         'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
@@ -82,8 +82,8 @@ function init() {
        
     /* ---------- オーバーレイ画像 ---------- */
     /* ----------
-   　const bounds = L.latLngBounds( 
-    　　[35.604242, 138.528167] , [35.102777, 139.163561]
+   const bounds = L.latLngBounds( 
+    [35.604242, 138.528167] , [35.102777, 139.163561]
     );
 
     const hazardmap = L.imageOverlay(
@@ -103,7 +103,7 @@ function init() {
             onEachFeature: (feature, layer) => {
                 layer.bindPopup(feature.properties.popup, {
                    maxWidth: 200 //ポップアップ最大幅
-　　　　　　　　　});
+});
             },
 
             pointToLayer: (feature, latlng) => {
@@ -130,7 +130,7 @@ function init() {
         return layer;
     }
 
-　const makaihantenchi = createGeoCsv('data/zetubou.csv', '');
+const makaihantenchi = createGeoCsv('data/zetubou.csv', '');
 
 /* ==========================================================
    BGM関連
@@ -194,7 +194,7 @@ bgmLayer3.on("remove", function () {
    レイヤーコンテナの中身
 ========================================================== */
   const baseMaps = {
-    "無　　音":bgmLayer0 ,
+    "無音":bgmLayer0 ,
     "BGM1を流す": bgmLayer1,
     "BGM2を流す": bgmLayer2,
     "BGM3を流す": bgmLayer3,
@@ -249,7 +249,7 @@ function onMapMousemove(e) {
     L.control.scale({
        position: "bottomright",
        imperial: false
-　　 }).addTo(map);
+ }).addTo(map);
 }
 
 
@@ -322,4 +322,3 @@ map.on("popupopen", function(e) {
 
 </body>
 </html>
-
