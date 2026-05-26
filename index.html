@@ -39,8 +39,7 @@ html, body, #mapcontainer {
 a.leaflet-popup-close-button { color: red !important; font: bold 10pt monospace; }
 .leaflet-popup-content-wrapper { border-width: 3px; border-style: solid; } 
 .leaflet-popup-tip-container {margin-top: -3px; height: 23px;} 
-.leaflet-popup-tip { border-style: solid; border-width: 0 3px 3px 0; }　
-
+.leaflet-popup-tip { border-style: solid; border-width: 0 3px 3px 0; }
 </style>
    
 </head>
@@ -71,11 +70,11 @@ function init() {
     var gsiattr = "｜<a href='https://maps.gsi.go.jp/development/ichiran.html' target='_blank'>地理院タイル</a>";
     var osmattr = "<a href='https://www.openstreetmap.org/copyright' target='_blank'>OpenStreetMap｜<a href='http://fujisanwalker.blog.fc2.com/' target='_blank'>富士山Walker</a>";
 　　
-   //地図タイル（openstreetmap）
-　　const osm = L.tileLayer(
+    //地図タイル（openstreetmap）
+   const osm = L.tileLayer(
         'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
         { attribution: osmattr , maxZoom: 18 }
-    ).addTo(map);　//デフォルト表示
+    ).addTo(map); //デフォルト表示
 
     /* ---------- オーバーレイ地図 ---------- */
     const gsirehillshademap = L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/hillshademap/{z}/{x}/{y}.png',
@@ -103,7 +102,7 @@ function init() {
 
             onEachFeature: (feature, layer) => {
                 layer.bindPopup(feature.properties.popup, {
-    　　　　　　　　　maxWidth: 200  //ポップアップ最大幅
+                   maxWidth: 200 //ポップアップ最大幅
 　　　　　　　　　});
             },
 
@@ -201,7 +200,7 @@ bgmLayer3.on("remove", function () {
     "BGM3を流す": bgmLayer3,
      };
    bgmLayer0.addTo(map); // ★ デフォルトON
-　 const overlays = {
+   const overlays = {
     "魔界の地形図": gsirehillshademap,
     "反転地を示す": makaihantenchi,
    };
@@ -248,8 +247,8 @@ function onMapMousemove(e) {
 /* ---------- 地図スケール ------------- */
 
     L.control.scale({
-        position: "bottomright",
-　　　　imperial: false
+       position: "bottomright",
+       imperial: false
 　　 }).addTo(map);
 }
 
