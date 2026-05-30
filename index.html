@@ -81,16 +81,18 @@ function init() {
          { opacity: 0.9, maxNativeZoom: 16, attribution: gsiattr }); // 陰影起伏図
        
     /* ---------- オーバーレイ画像 ---------- */
-    /* ----------
    const bounds = L.latLngBounds( 
     [35.604242, 138.528167] , [35.102777, 139.163561]
     );
-
-    const hazardmap = L.imageOverlay(
+   const hazardmap = L.imageOverlay(
         'data/newhazardmap.jpg', bounds, { opacity: 0.7, maxNativeZoom: 18 }
     );
-    ---------- */
 
+   /* ---------- オーバーレイ（ 地図＋画像 ） ---------- */
+   const terrainHazardLayer = L.layerGroup([
+      gsirehillshademap,  // 下
+      hazardmap,          // 上
+    ]);
 
 /* ---------- マークポイント読込( 外部CSVファイルから ) ---------- */
     function createGeoCsv(url, defaultIcon) {
@@ -201,10 +203,10 @@ bgmLayer3.on("remove", function () {
      };
    bgmLayer0.addTo(map); // ★ デフォルトON
    const overlays = {
-    "魔界の地形図": gsirehillshademap,
+    "魔界の地形図": terrainHazardLayer,
     "反転地を示す": makaihantenchi,
    };
-   gsirehillshademap.addTo(map); // ★ デフォルトON
+   terrainHazardLayer.addTo(map); // ★ デフォルトON
    makaihantenchi.addTo(map); // ★ デフォルトON
      
 //////////////////////////緯度経度pluginの設定/////////////////////
