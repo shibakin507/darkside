@@ -84,8 +84,8 @@ function init() {
    const bounds = L.latLngBounds( 
     [35.44710, 138.64179] , [35.34544, 138.73612]
     );
-   const hazardmap = L.imageOverlay(
-        'data/baasan.jpg', bounds, { opacity: 0.7, maxNativeZoom: 18 }
+   const baasan = L.imageOverlay(
+        'data/baasan.gif', bounds, { opacity: 0.7, maxNativeZoom: 18 }
     );
 
    /* ---------- オーバーレイ（ 地図＋画像 ） ---------- */
