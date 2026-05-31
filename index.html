@@ -82,16 +82,16 @@ function init() {
        
     /* ---------- オーバーレイ画像 ---------- */
    const bounds = L.latLngBounds( 
-    [35.604242, 138.528167] , [35.102777, 139.163561]
+    [35.44710, 138.64179] , [35.34544, 138.73612]
     );
    const hazardmap = L.imageOverlay(
-        'data/newhazardmap.jpg', bounds, { opacity: 0.7, maxNativeZoom: 18 }
+        'data/baasan.jpg', bounds, { opacity: 0.7, maxNativeZoom: 18 }
     );
 
    /* ---------- オーバーレイ（ 地図＋画像 ） ---------- */
    const terrainHazardLayer = L.layerGroup([
       gsirehillshademap,  // 下
-      hazardmap,          // 上
+      baasan,          // 上
     ]);
 
 /* ---------- マークポイント読込( 外部CSVファイルから ) ---------- */
