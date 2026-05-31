@@ -87,11 +87,17 @@ function init() {
    const baasan = L.imageOverlay(
         'data/baasan.gif', bounds, { opacity: 0.5, maxNativeZoom: 18 }
     );
-
+   const bounds2 = L.latLngBounds( 
+    [35.36875, 138.61982] , [35.29509, 138.72367]
+    );
+   const furakuinga = L.imageOverlay(
+        'data/furakuinga.gif', bounds2, { opacity: 1.0, maxNativeZoom: 18 }
+    );
    /* ---------- オーバーレイ（ 地図＋画像 ） ---------- */
    const terrainHazardLayer = L.layerGroup([
       gsirehillshademap,  // 下
-      baasan,          // 上
+      baasan,          // 中
+      furakuinga,    // 上
     ]);
 
 /* ---------- マークポイント読込( 外部CSVファイルから ) ---------- */
