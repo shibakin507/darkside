@@ -202,14 +202,14 @@ bgmLayer3.on("remove", function () {
    レイヤーコンテナの中身
 ========================================================== */
   const baseMaps = {
-    "無音":bgmLayer0 ,
+    "音を消す":bgmLayer0 ,
     "BGM1を流す": bgmLayer1,
     "BGM2を流す": bgmLayer2,
     "BGM3を流す": bgmLayer3,
      };
    bgmLayer0.addTo(map); // ★ デフォルトON
    const overlays = {
-    "魔界の地形図": terrainHazardLayer,
+    "不死山地形図": terrainHazardLayer,
     "反転地を示す": makaihantenchi,
    };
    terrainHazardLayer.addTo(map); // ★ デフォルトON
