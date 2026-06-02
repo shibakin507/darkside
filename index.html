@@ -93,11 +93,19 @@ function init() {
    const furakuinga = L.imageOverlay(
         'data/furakuinga.gif', bounds2, { opacity: 1.0, maxNativeZoom: 18 }
     );
+   const bounds3 = L.latLngBounds( 
+    [35.43410, 138.59905] , [35.36133, 138.75526]
+    );
+   const batman = L.imageOverlay(
+        'data/batman.gif', bounds3, { opacity: 1.0, maxNativeZoom: 18 }
+    );
+  
    /* ---------- オーバーレイ（ 地図＋画像 ） ---------- */
    const terrainHazardLayer = L.layerGroup([
       gsirehillshademap,  // 下
       baasan,          // 中
       furakuinga,    // 上
+      batman,     // 最上
     ]);
 
 /* ---------- マークポイント読込( 外部CSVファイルから ) ---------- */
