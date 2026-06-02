@@ -68,16 +68,19 @@ a.leaflet-popup-close-button { color: red !important; font: bold 10pt monospace;
     }
 
 /* ================= 鼓動アニメ ================= */
+
 @keyframes pulseArrow {
-0%   { transform: scale(1);   filter: drop-shadow(0 0 0px red); }
-50%  { transform: scale(1.28); filter: drop-shadow(0 0 14px red); }
-100% { transform: scale(1);   filter: drop-shadow(0 0 0px red); }
+    0%   { transform: scale(1);   filter: drop-shadow(0 0 0px red); }
+    50%  { transform: scale(1.28); filter: drop-shadow(0 0 14px red); }
+    100% { transform: scale(1);   filter: drop-shadow(0 0 0px red); }
 }
 
-/* SVG全体を鼓動させる */
-.arrow-svg.pulsing {
-animation: pulseArrow 1.1s ease-in-out infinite;
-transform-origin: center;
+/* .arrow-svg ではなく、その中にある polygon 全体を揺らす。
+   transform-origin を真ん中にするために 50% 50% を指定します。
+*/
+.arrow-svg.pulsing polygon {
+    animation: pulseArrow 1.1s ease-in-out infinite;
+    transform-origin: 50% 50%;
 }
 
    
@@ -450,6 +453,9 @@ bgmLayer3.on("remove", function () {
        position: "bottomright",
        imperial: false
  }).addTo(map);
+
+setupOrientation(); // 方位センサーを起動
+   
 }
 
 
