@@ -453,9 +453,11 @@ bgmLayer3.on("remove", function () {
        position: "bottomright",
        imperial: false
  }).addTo(map);
-/* ---------- 方位センサー ---------- */
-setupOrientation();
-｝
+
+ // ★ ここに追記：方位センサーの監視を開始する
+ setupOrientation(); 
+}
+
 init();
 
 /* ======================================================
