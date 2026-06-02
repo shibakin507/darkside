@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport"
 content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-<title>????</title>
+<title>不死山 不落因果反転地</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
@@ -12,13 +12,6 @@ content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable
 <!-- フラッシュするアイコン--> 
 <script src="dist/L.Icon.Pulse.js"></script>
 <link rel="stylesheet" href="dist/L.Icon.Pulse.css" />
-
-<!--　<style>
-/* =============================
-   緯度経度のスタイル
-============================= 
-.infostyle {border: solid 1px; background-color: azure; border-radius: 10px; opacity: 0.8; padding: 5px; font-size:15px; color: black; } 
-</style>　--> 
 
    
 <style>
@@ -223,31 +216,6 @@ bgmLayer3.on("remove", function () {
    terrainHazardLayer.addTo(map); // ★ デフォルトON
    makaihantenchi.addTo(map); // ★ デフォルトON
      
-/*　//////////////////////////緯度経度pluginの設定/////////////////////
-map.on('mousemove touchmove', onMapMousemove);
-      //左下にdivコントロールを表示
-      var latloninfo = L.control({ position: "bottomleft" });
-      latloninfo.onAdd = function (map) {
-        //divを作成
-        this.ele = L.DomUtil.create('div', "infostyle");
-        //後で使うためにidを設定
-        this.ele.id = "latlondiv";
-        //最初は非表示
-        this.ele.style.visibility = "hidden";
-        //div上のとmousemoveイベントがmapに連鎖しないように設定
-        this.ele.onmousemove = function (e) { e.stopPropagation() };
-        return this.ele;
-      };
-      latloninfo.addTo(map);
-function onMapMousemove(e) {
-      //地図上を移動した際にdiv中に緯度経度を表示
-      var box = document.getElementById("latlondiv");
-      var html = "緯度:" + e.latlng.lat.toFixed(6) + "<br>" +
-        "経度:" + e.latlng.lng.toFixed(6);
-      box.innerHTML = html;
-      box.style.visibility = "visible";
-    }
-//////////////////////////緯度経度pluginの設定おわり/////////////////////　*/
 
 /* ======================================================
        UIコンテナ配置
