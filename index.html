@@ -140,6 +140,13 @@ function init() {
     /* ---------- 地図生成 ---------- */
     map = L.map('mapcontainer', {
         zoomControl: false,
+        rotate: true,
+        bearing: 0,
+        compass: false,
+        zoomAnimation: false, //以下iOSのガクガク対策
+        zoomAnimationThreshold: 1,
+        preferCanvas: true 
+
    }).setView([35.31764, 138.66840], 11);
 
     /* ---------- ベース地図 ---------- */
