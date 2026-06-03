@@ -118,10 +118,10 @@ const myArrowIcon = L.divIcon({
 });
 
 /* ==========================================================
-   初期化
+   init関数（始まり）
 ========================================================== */
+
 function init() {
-    
     /* ---------- 地図生成 ---------- */
     map = L.map('mapcontainer', {
         zoomControl: false,
@@ -144,14 +144,14 @@ function init() {
     ).addTo(map); //デフォルト表示
 
 
-/* ---------- 地図スケール ---------- */
- L.control.scale({
+    /* ---------- 地図スケール配置 ---------- */
+    L.control.scale({
         maxWidth: 200,
         position: 'bottomright',
         imperial: false
     }).addTo(map);
 
-    /* ---------- GPS（Locate） ---------- */
+    /* ---------- GPS（Locate配置） ---------- */
     const lc = L.control.locate({
         position: "topright",
         flyTo: false,
@@ -167,47 +167,33 @@ function init() {
     }).addTo(map);
 
     map.on('locateactivate', () => {
-    isLocateActive = true;
-    setArrowColor('#ff0000');
-    setArrowPulse(true);   // 既にあれば即鼓動
-});
-
-map.on('locatedeactivate', () => {
-    isLocateActive = false;
-    setArrowColor('#999999');
-    setArrowPulse(false);
-});
-
-
-map.on('locationfound', e => {
-
-    if (!myMarker) {
-        myMarker = L.marker(e.latlng, {
-            icon: myArrowIcon,
-            interactive: false
-        }).addTo(map);
-    } else {
-        myMarker.setLatLng([e.latitude + 0.00005, e.longitude]);
-    }
-
-    // ★ 1回目でも必ず鼓動させる
-    if (isLocateActive) {
-        setArrowPulse(true);
+        isLocateActive = true;
         setArrowColor('#ff0000');
-    }
-});
+        setArrowPulse(true);   // 既にあれば即鼓動
+    });
 
+    map.on('locatedeactivate', () => {
+        isLocateActive = false;
+        setArrowColor('#999999');
+        setArrowPulse(false);
+    });
 
+    map.on('locationfound', e => {
+        if (!myMarker) {
+            myMarker = L.marker(e.latlng, {
+                icon: myArrowIcon,
+                interactive: false
+            }).addTo(map);
+        } else {
+            myMarker.setLatLng([e.latitude + 0.00005, e.longitude]);
+        }
 
-
-
-
-
-
-
-
-
-
+        // ★ 1回目でも必ず鼓動させる
+        if (isLocateActive) {
+            setArrowPulse(true);
+            setArrowColor('#ff0000');
+        }
+    });
 
     /* ---------- オーバーレイ地図 ---------- */
     const gsirehillshademap = L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/hillshademap/{z}/{x}/{y}.png',
@@ -241,7 +227,7 @@ map.on('locationfound', e => {
       batman,     // 最上
     ]);
 
-/* ---------- マークポイント読込( 外部CSVファイルから ) ---------- */
+   /* ---------- マークポイント読込( 外部CSVファイルから ) ---------- */
     function createGeoCsv(url, defaultIcon) {
 
         const layer = L.geoCsv(null, {
@@ -252,7 +238,7 @@ map.on('locationfound', e => {
             onEachFeature: (feature, layer) => {
                 layer.bindPopup(feature.properties.popup, {
                    maxWidth: 200 //ポップアップ最大幅
-});
+                });
             },
 
             pointToLayer: (feature, latlng) => {
@@ -373,11 +359,9 @@ bgmLayer3.on("remove", function () {
 
 }
 
-/* ---------- init関数ここで終わる---------- */
-
-
-
-
+/* ==========================================================
+   init関数の（終わり）
+========================================================== */
 
 /* ==================================================
    ▲色変更
@@ -459,9 +443,6 @@ function handleOrientation(e) {
 
     map.setBearing(currentBearing);
 }
-
-
-
 
 
 init();
