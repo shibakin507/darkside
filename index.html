@@ -5,20 +5,15 @@
 <meta name="viewport"
 content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
 <title>不死山 不落因果反転地</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet-rotate@0.2.8/dist/leaflet-rotate.js"></script>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://shibakin507.github.io/-NAVI/dist/leaflet.geocsv.js"></script>
+<link rel="stylesheet" href="https://shibakin507.github.io/-NAVI/dist/L.Control.Locate.min.css" />
+<script src="https://unpkg.com/leaflet.locatecontrol/dist/L.Control.Locate.min.js"></script>
 
-<!--
-<script src="https://cdn.jsdelivr.net/npm/leaflet-rotate@0.2.8/dist/leaflet-rotate.min.js"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet-locatecontrol/0.85.1/L.Control.Locate.min.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-locatecontrol/0.85.1/L.Control.Locate.min.js"></script>
--->
 
-<script src="dist/leaflet-rotate.min.js"></script>
-<link rel="stylesheet" href="dist/L.Control.Locate.min.css">
-<script src="dist/L.Control.Locate.min.js"></script>
 
 <!-- フラッシュするアイコン--> 
 <script src="dist/L.Icon.Pulse.js"></script>
@@ -30,11 +25,36 @@ content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable
    基本レイアウト
 ============================= */
 html, body, #mapcontainer {
-        height: 100%;
-        width: 100vw;
-        margin: 0;
-        padding: 0;
-    }
+    height: 100%;
+    margin: 0;
+}
+
+/* 回転UIは非表示 */
+.leaflet-compass,
+.leaflet-control-rotate {
+    display: none !important;
+}
+/* iOSのガクガク対策 */
+.leaflet-image-layer,
+.leaflet-map-pane,
+.leaflet-overlay-pane {
+     transform: translateZ(0);
+     will-change: transform;
+     backface-visibility: hidden;
+}
+
+/* =============================
+   現在地アイコンの鼓動アニメーション
+============================= */
+@keyframes pulseArrow {
+    0% { transform: scale(1); filter: drop-shadow(0 0 0px red); }
+    50% { transform: scale(1.28); filter: drop-shadow(0 0 14px red); }
+    100% { transform: scale(1); filter: drop-shadow(0 0 0px red); }
+}
+.arrow-svg.pulsing {
+    animation: pulseArrow 1.1s ease-in-out infinite;
+    transform-origin: center;
+}
 
 
 /* =============================
@@ -47,43 +67,6 @@ a.leaflet-popup-close-button { color: red !important; font: bold 10pt monospace;
 .leaflet-popup-content-wrapper { border-width: 3px; border-style: solid; } 
 .leaflet-popup-tip-container {margin-top: -3px; height: 23px;} 
 .leaflet-popup-tip { border-style: solid; border-width: 0 3px 3px 0; }
-
-/* =============================
-   Leaflet Rotate関連のスタイル
-============================= */
-
-  /* Leaflet Rotate のコンパスを非表示 */
-    .leaflet-compass,
-    .leaflet-control-rotate {
-        display: none !important;
-    }
-  
-   /* iOSのガクガク対策 */
-    .leaflet-image-layer,
-    .leaflet-map-pane,
-    .leaflet-overlay-pane {
-       transform: translateZ(0);
-       will-change: transform;
-       backface-visibility: hidden;
-    }
-
-/* ================= 鼓動アニメ ================= */
-
-@keyframes pulseArrow {
-    0%   { transform: scale(1);   filter: drop-shadow(0 0 0px red); }
-    50%  { transform: scale(1.28); filter: drop-shadow(0 0 14px red); }
-    100% { transform: scale(1);   filter: drop-shadow(0 0 0px red); }
-}
-
-/* .arrow-svg ではなく、その中にある polygon 全体を揺らす。
-   transform-origin を真ん中にするために 50% 50% を指定します。
-*/
-.arrow-svg.pulsing polygon {
-    animation: pulseArrow 1.1s ease-in-out infinite;
-    transform-origin: 50% 50%;
-}
-
-   
 </style>
    
 </head>
@@ -94,15 +77,17 @@ a.leaflet-popup-close-button { color: red !important; font: bold 10pt monospace;
 <audio id="bgm" loop></audio>
    
 <script>
-/* ==========================================================
+/* ==================================================
    グローバル変数
-========================================================== */
+================================================== */
 let map;
+let baseMaps;
 let myMarker = null;
-
 let currentBearing = 0;
 const smooth = 0.15; // 地図回転の滑らかさ
 let isLocateActive = false;   // ★ GPS状態フラグ
+
+
 /* ==================================================
    現在地アイコン（▲）
 ================================================== */
@@ -142,12 +127,10 @@ function init() {
         zoomControl: false,
         rotate: true,
         bearing: 0,
-        compass: false,
         zoomAnimation: false, //以下iOSのガクガク対策
         zoomAnimationThreshold: 1,
         preferCanvas: true 
-
-   }).setView([35.31764, 138.66840], 11);
+    }).setView([35.31764, 138.66840], 11);
 
     /* ---------- ベース地図 ---------- */
     //クレジット表記
@@ -159,6 +142,72 @@ function init() {
         'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
         { attribution: osmattr , maxZoom: 18 }
     ).addTo(map); //デフォルト表示
+
+
+/* ---------- 地図スケール ---------- */
+ L.control.scale({
+        maxWidth: 200,
+        position: 'bottomright',
+        imperial: false
+    }).addTo(map);
+
+    /* ---------- GPS（Locate） ---------- */
+    const lc = L.control.locate({
+        position: "topright",
+        flyTo: false,
+        showCompass: false,
+        drawMarker: false,
+        drawCircle: false,
+        setView: 'once',
+      　initialZoomLevel: 14, // ← ちょうど良いズームにする（数字小さいほど広く表示）
+        watch: true,
+        locateOptions: {
+            enableHighAccuracy: true
+        }
+    }).addTo(map);
+
+    map.on('locateactivate', () => {
+    isLocateActive = true;
+    setArrowColor('#ff0000');
+    setArrowPulse(true);   // 既にあれば即鼓動
+});
+
+map.on('locatedeactivate', () => {
+    isLocateActive = false;
+    setArrowColor('#999999');
+    setArrowPulse(false);
+});
+
+
+map.on('locationfound', e => {
+
+    if (!myMarker) {
+        myMarker = L.marker(e.latlng, {
+            icon: myArrowIcon,
+            interactive: false
+        }).addTo(map);
+    } else {
+        myMarker.setLatLng([e.latitude + 0.00005, e.longitude]);
+    }
+
+    // ★ 1回目でも必ず鼓動させる
+    if (isLocateActive) {
+        setArrowPulse(true);
+        setArrowColor('#ff0000');
+    }
+});
+
+
+
+
+
+
+
+
+
+
+
+
 
     /* ---------- オーバーレイ地図 ---------- */
     const gsirehillshademap = L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/hillshademap/{z}/{x}/{y}.png',
@@ -231,134 +280,6 @@ function init() {
     }
 
 const makaihantenchi = createGeoCsv('data/zetubou.csv', '');
-
-    /* ---------- GPS（Locate） ---------- */
-    const lc = L.control.locate({
-        position: "topleft",
-        flyTo: false,
-        showCompass: false,
-        drawMarker: false,
-        drawCircle: false,
-        setView: 'once',
-      　initialZoomLevel: 14, // ← ちょうど良いズームにする（数字小さいほど広く表示）
-        watch: true,
-        locateOptions: {
-            enableHighAccuracy: true
-        }
-    }).addTo(map);
-
-    map.on('locateactivate', () => {
-    isLocateActive = true;
-    setArrowColor('#ff0000');
-    setArrowPulse(true);   // 既にあれば即鼓動
-});
-
-map.on('locatedeactivate', () => {
-    isLocateActive = false;
-    setArrowColor('#999999');
-    setArrowPulse(false);
-});
-
-
-map.on('locationfound', e => {
-
-    if (!myMarker) {
-        myMarker = L.marker(e.latlng, {
-            icon: myArrowIcon,
-            interactive: false
-        }).addTo(map);
-    } else {
-        myMarker.setLatLng([e.latitude + 0.00005, e.longitude]);
-    }
-
-    // ★ 1回目でも必ず鼓動させる
-    if (isLocateActive) {
-        setArrowPulse(true);
-        setArrowColor('#ff0000');
-    }
-});
-/* ==================================================
-   ▲色変更
-================================================== */
-function setArrowColor(color) {
-    if (!myMarker) return;
-
-    const el = myMarker.getElement();
-    if (!el) return;
-
-    const poly = el.querySelector('#myArrow');
-    if (poly) poly.setAttribute('fill', color);
-}
-
-function setArrowPulse(on) {
-    if (!myMarker) return;
-
-    const svg = myMarker.getElement()?.querySelector('.arrow-svg');
-    if (!svg) return;
-
-    if (on) {
-        svg.classList.add('pulsing');
-    } else {
-        svg.classList.remove('pulsing');
-    }
-}
-
-/* ==================================================
-   方位センサー（iOS / Android）
-================================================== */
-function setupOrientation() {
-
-    const requestPermission = () => {
-
-        // iOS
-        if (typeof DeviceOrientationEvent?.requestPermission === "function") {
-            DeviceOrientationEvent.requestPermission()
-                .then(res => {
-                    if (res === 'granted') {
-                        window.addEventListener(
-                            'deviceorientation',
-                            handleOrientation,
-                            true
-                        );
-                    }
-                })
-                .catch(console.error);
-
-        // Android
-        } else {
-            const eventName =
-                ("ondeviceorientationabsolute" in window)
-                ? "deviceorientationabsolute"
-                : "deviceorientation";
-
-            window.addEventListener(eventName, handleOrientation, true);
-        }
-    };
-
-    // ★ Locate ボタン起動をユーザー操作として使う
-    map.on('locateactivate', requestPermission);
-}
-
-function handleOrientation(e) {
-    if (!map) return;
-
-    let heading = 0;
-
-    if (e.webkitCompassHeading) {
-        heading = e.webkitCompassHeading; // iOS
-    } else if (e.alpha != null) {
-        heading = e.alpha; // Android
-    }
-
-    if (!heading) return;
-
-    const diff = ((heading - currentBearing + 540) % 360) - 180;
-    currentBearing += diff * smooth;
-
-    map.setBearing(currentBearing);
-}
-
-
 
 /* ==========================================================
    BGM関連
@@ -443,20 +364,105 @@ bgmLayer3.on("remove", function () {
 /* ---------- レイヤーコンテナ ------------- */
 
     L.control.layers(baseMaps, overlays, {
-        position: "topright",
+        position: "topleft",
         collapsed: true //コンテナへ格納
     }).addTo(map);
 
-/* ---------- 地図スケール ------------- */
+/* ---------- 方位センサー ---------- */
+    setupOrientation();
 
-    L.control.scale({
-       position: "bottomright",
-       imperial: false
- }).addTo(map);
-
- // ★ ここに追記：方位センサーの監視を開始する
- setupOrientation(); 
 }
+
+/* ---------- init関数ここで終わる---------- */
+
+
+
+
+
+/* ==================================================
+   ▲色変更
+================================================== */
+function setArrowColor(color) {
+    if (!myMarker) return;
+
+    const el = myMarker.getElement();
+    if (!el) return;
+
+    const poly = el.querySelector('#myArrow');
+    if (poly) poly.setAttribute('fill', color);
+}
+
+function setArrowPulse(on) {
+    if (!myMarker) return;
+
+    const svg = myMarker.getElement()?.querySelector('.arrow-svg');
+    if (!svg) return;
+
+    if (on) {
+        svg.classList.add('pulsing');
+    } else {
+        svg.classList.remove('pulsing');
+    }
+}
+
+/* ==================================================
+   方位センサー（iOS / Android）
+================================================== */
+function setupOrientation() {
+
+    const requestPermission = () => {
+
+        // iOS
+        if (typeof DeviceOrientationEvent?.requestPermission === "function") {
+            DeviceOrientationEvent.requestPermission()
+                .then(res => {
+                    if (res === 'granted') {
+                        window.addEventListener(
+                            'deviceorientation',
+                            handleOrientation,
+                            true
+                        );
+                    }
+                })
+                .catch(console.error);
+
+        // Android
+        } else {
+            const eventName =
+                ("ondeviceorientationabsolute" in window)
+                ? "deviceorientationabsolute"
+                : "deviceorientation";
+
+            window.addEventListener(eventName, handleOrientation, true);
+        }
+    };
+
+    // ★ Locate ボタン起動をユーザー操作として使う
+    map.on('locateactivate', requestPermission);
+}
+
+function handleOrientation(e) {
+    if (!map) return;
+
+    let heading = 0;
+
+    if (e.webkitCompassHeading) {
+        heading = e.webkitCompassHeading; // iOS
+    } else if (e.alpha != null) {
+        heading = e.alpha; // Android
+    }
+
+    if (!heading) return;
+
+    const diff = ((heading - currentBearing + 540) % 360) - 180;
+    currentBearing += diff * smooth;
+
+    map.setBearing(currentBearing);
+}
+
+
+
+
 
 init();
 
