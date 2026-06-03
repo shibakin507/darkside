@@ -317,10 +317,10 @@ bgmLayer2.on("remove", function () {
 /* ---------- BGM3 ---------- */
 const bgmLayer3 = L.layerGroup();
 bgmLayer3.on("add", function () {
-    playBGM("data/bgm3.mp3");
+    playBGM("data/bgm3.wav");
 });
 bgmLayer3.on("remove", function () {
-    if (bgm.src.includes("bgm3.mp3")) {
+    if (bgm.src.includes("bgm3.wav")) {
         stopBGM();
     }
 });
@@ -330,9 +330,9 @@ bgmLayer3.on("remove", function () {
 ========================================================== */
   const baseMaps = {
     "音を消す":bgmLayer0 ,
-    "BGM1を流す": bgmLayer1,
-    "BGM2を流す": bgmLayer2,
-    "BGM3を流す": bgmLayer3,
+    "般若心経を流す": bgmLayer1,
+    "怖いBGMを流す": bgmLayer2,
+    "ヤバイからね": bgmLayer3,
      };
    bgmLayer0.addTo(map); // ★ デフォルトON
    const overlays = {
