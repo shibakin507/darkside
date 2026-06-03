@@ -294,11 +294,11 @@ const bgmLayer0 = L.layerGroup();
 /* ---------- BGM1 ---------- */
 const bgmLayer1 = L.layerGroup();
 bgmLayer1.on("add", function () {
-    playBGM("data/bgm1.mp3");
+    playBGM("data/bgm1.wav");
 });
 bgmLayer1.on("remove", function () {
     // 自分が再生中なら停止
-    if (bgm.src.includes("bgm1.mp3")) {
+    if (bgm.src.includes("bgm1.wav")) {
         stopBGM();
     }
 });
@@ -317,10 +317,10 @@ bgmLayer2.on("remove", function () {
 /* ---------- BGM3 ---------- */
 const bgmLayer3 = L.layerGroup();
 bgmLayer3.on("add", function () {
-    playBGM("data/bgm3.mp3");
+    playBGM("data/bgm3.wav");
 });
 bgmLayer3.on("remove", function () {
-    if (bgm.src.includes("bgm3.mp3")) {
+    if (bgm.src.includes("bgm3.wav")) {
         stopBGM();
     }
 });
