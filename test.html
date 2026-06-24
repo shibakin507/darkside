@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>GSI Tiles on Leaflet - Image Overlay Editor</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+
+<style>
+  /* 画面全体にマップを表示するための必須設定 */
+  html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+  }
+  #map {
+    height: 100vh;
+    width: 100vw;
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+  }
+
+  /* 操作パネルのスタイル */
+  .map-control-panel {
+    background: rgba(255, 255, 255, 0.95);
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    width: 260px;
+    font-family: sans-serif;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .map-control-panel h3 { margin: 0 0 10px 0; font-size: 14px; border-bottom: 1px solid #ccc; padding-bottom: 5px; }
+  .control-group { margin-bottom: 12px; }
+  .control-group label { display: block; font-weight: bold; margin-bottom: 4px; }
+  .control-group input[type="range"] { width: 100%; margin-top: 4px; }
+  .coords-display {
+    background: #f8f9fa;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-family: monospace;
+    white-space: pre-wrap;
+    font-size: 11px;
+    color: #333;
+  }
+  .btn-submit {
+    width: 100%;
+    padding: 8px;
+    background: #0078A8;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 13px;
+  }
+  .btn-submit:hover { background: #005A7E; }
+  .btn-submit:disabled { background: #ccc; cursor: not-allowed; }
+</style>
+</head>
+
+<body>
+
+<div id="map"></div>
+
+<script>
+// 1. マップの初期化（日本全体が見える位置）
+var map = L.map('map').setView([35.3622222, 138.7313889], 5);
+
+// 2. 地理院タイルの読み込み
+L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', {
+  attribution: "<a href='https://maps.gsi.go.jp/development/ichiran.html' target='_blank'>地理院タイル</a>"
+}).addTo(map);
+
+// グローバル変数の定義
+var overlayImage = null;
+var overlayImageUrl = null;
+var imageBounds = null;
+var handleMarkers = [];
+
+// 3. Leaflet上にコントロールパネルを追加
+var ControlPanel = L.Control.extend({
+  options: { position: 'topright' },
+  onAdd: function (map) {
+    var div = L.DomUtil.create('div', 'map-control-panel');
+    div.innerHTML = `
+      <h3>画像オーバーレイ設定</h3>
+      <div class="control-group">
+        <label>1. 画像ファイル選択</label>
+        <input type="file" id="imageLoader" accept="image/*">
+      </div>
+      <div class="control-group">
+        <label>2. 透過度調整</label>
+        <input type="range" id="opacitySlider" min="0" max="1" step="0.1" value="0.7">
+      </div>
+      <div class="control-group">
+        <label>3. 四隅の座標 (自動更新)</label>
+        <div id="coordsOutput" class="coords-display">画像が未選択です</div>
+      </div>
+      <div class="control-group">
+        <button id="exportHtmlBtn" class="btn-submit" disabled>4. HTMLファイル作成</button>
+      </div>
+    `;
+    // パネル上でのクリックやスクロールが地図に伝播するのを防ぐ
+    L.DomEvent.disableClickPropagation(div);
+    L.DomEvent.disableScrollPropagation(div);
+    return div;
+  }
+});
+map.addControl(new ControlPanel());
+
+// 要素の取得
+var imageLoader = document.getElementById('imageLoader');
+var opacitySlider = document.getElementById('opacitySlider');
+var coordsOutput = document.getElementById('coordsOutput');
+var exportHtmlBtn = document.getElementById('exportHtmlBtn');
+
+// 4. 画像が選択されたときの処理
+imageLoader.addEventListener('change', function(e) {
+  var file = e.target.files[0];
+  if (!file) return;
+
+  var reader = new FileReader();
+  reader.onload = function(event) {
+    overlayImageUrl = event.target.result;
+    
+    // 初期化
+    clearOverlay();
+
+    // 現在の表示画面の中心から、適度な大きさの矩形（Bounds）を計算
+    var center = map.getCenter();
+    var zoom = map.getZoom();
+    var offset = 3 / Math.pow(2, zoom - 5); // ズームに応じた初期サイズ調整
+
+    var swLatlng = L.latLng(center.lat - offset, center.lng - offset * 1.5);
+    var neLatlng = L.latLng(center.lat + offset, center.lng + offset * 1.5);
+    imageBounds = L.latLngBounds(swLatlng, neLatlng);
+
+    // 画像をマップに追加
+    overlayImage = L.imageOverlay(overlayImageUrl, imageBounds, {
+      opacity: parseFloat(opacitySlider.value),
+      interactive: false
+    }).addTo(map);
+
+    // ドラッグ用ハンドルの作成
+    createHandles();
+    // 座標表示の更新
+    updateCoordsDisplay();
+    // ボタンの有効化
+    exportHtmlBtn.disabled = false;
+  };
+  reader.readAsDataURL(file);
+});
+
+// 透過度変更イベント
+opacitySlider.addEventListener('input', function(e) {
+  if (overlayImage) {
+    overlayImage.setOpacity(parseFloat(e.target.value));
+  }
+});
+
+// ハンドル（四隅のマーカー）を作成する関数
+function createHandles() {
+  if (!imageBounds) return;
+
+  // 四隅の座標を取得
+  var corners = [
+    { id: 'nw', getLngLat: function(b) { return [b.getWest(), b.getNorth()]; } }, // 北西
+    { id: 'ne', getLngLat: function(b) { return [b.getEast(), b.getNorth()]; } }, // 北東
+    { id: 'se', getLngLat: function(b) { return [b.getEast(), b.getSouth()]; } }, // 南東
+    { id: 'sw', getLngLat: function(b) { return [b.getWest(), b.getSouth()]; } }  // 南西
+  ];
+
+  corners.forEach(function(corner) {
+    var lngLat = corner.getLngLat(imageBounds);
+    var latlng = L.latLng(lngLat[1], lngLat[0]);
+
+    // つまみやすい丸型のカスタムアイコン
+    var icon = L.divIcon({
+      className: 'custom-drag-handle',
+      html: '<div style="background:#fff; border:3px solid #0078A8; width:14px; height:14px; border-radius:50%; box-shadow:0 1px 4px rgba(0,0,0,0.4); margin-left:-7px; margin-top:-7px; cursor:move;"></div>',
+      iconSize: [14, 14]
+    });
+
+    // 通常のL.markerとして作成（これが一番ドラッグの挙動が安定します）
+    var marker = L.marker(latlng, {
+      draggable: true,
+      icon: icon,
+      zIndexOffset: 1000
+    }).addTo(map);
+
+    marker.cornerId = corner.id;
+
+    // ドラッグ中のリアルタイム処理
+    marker.on('drag', function(e) {
+      updateOverlayFromHandles(marker);
+    });
+
+    handleMarkers.push(marker);
+  });
+}
+
+// ハンドルがドラッグされたときに画像と他のハンドルを連動変形させる
+function updateOverlayFromHandles(draggedMarker) {
+  var draggedId = draggedMarker.cornerId;
+  var draggedLatLng = draggedMarker.getLatLng();
+
+  // 各ハンドルの現在の位置を特定
+  var nw, ne, se, sw;
+  handleMarkers.forEach(function(m) {
+    if (m.cornerId === 'nw') nw = m.getLatLng();
+    if (m.cornerId === 'ne') ne = m.getLatLng();
+    if (m.cornerId === 'se') se = m.getLatLng();
+    if (m.cornerId === 'sw') sw = m.getLatLng();
+  });
+
+  // ドラッグされた角に応じて、対面・隣接する角を矩形が保たれるように追従計算
+  if (draggedId === 'nw') {
+    nw = draggedLatLng;
+    ne = L.latLng(nw.lat, se.lng);
+    sw = L.latLng(se.lat, nw.lng);
+  } else if (draggedId === 'ne') {
+    ne = draggedLatLng;
+    nw = L.latLng(ne.lat, sw.lng);
+    se = L.latLng(sw.lat, ne.lng);
+  } else if (draggedId === 'se') {
+    se = draggedLatLng;
+    ne = L.latLng(nw.lat, se.lng);
+    sw = L.latLng(se.lat, nw.lng);
+  } else if (draggedId === 'sw') {
+    sw = draggedLatLng;
+    nw = L.latLng(sw.lat, ne.lng);
+    se = L.latLng(ne.lat, sw.lng);
+  }
+
+  // 全ハンドルの位置を再セット
+  handleMarkers.forEach(function(m) {
+    if (m.cornerId === 'nw') m.setLatLng(nw);
+    if (m.cornerId === 'ne') m.setLatLng(ne);
+    if (m.cornerId === 'se') m.setLatLng(se);
+    if (m.cornerId === 'sw') m.setLatLng(sw);
+  });
+
+  // 画像の境界を更新
+  imageBounds = L.latLngBounds(sw, ne);
+  if (overlayImage) {
+    overlayImage.setBounds(imageBounds);
+  }
+
+  // 座標表示の更新
+  updateCoordsDisplay();
+}
+
+// 座標テキストの更新
+function updateCoordsDisplay() {
+  if (!imageBounds) return;
+  var nw = imageBounds.getNorthWest();
+  var se = imageBounds.getSouthEast();
+
+  coordsOutput.innerText = 
+    `【北西 (NW)】\n緯度: ${nw.lat.toFixed(6)}\n経度: ${nw.lng.toFixed(6)}\n\n` +
+    `【南東 (SE)】\n緯度: ${se.lat.toFixed(6)}\n経度: ${se.lng.toFixed(6)}`;
+}
+
+// リセット処理
+function clearOverlay() {
+  if (overlayImage) { map.removeLayer(overlayImage); overlayImage = null; }
+  handleMarkers.forEach(function(m) { map.removeLayer(m); });
+  handleMarkers = [];
+}
+
+// 5. HTML出力処理
+exportHtmlBtn.addEventListener('click', function() {
+  if (!imageBounds || !overlayImageUrl) return;
+
+  var nw = imageBounds.getNorthWest();
+  var se = imageBounds.getSouthEast();
+  var center = map.getCenter();
+  var zoom = map.getZoom();
+  var opacity = opacitySlider.value;
+
+  var outputHtml = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Generated Overlay Map</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"><\/script>
+<style>
+  html, body, #map { height: 100%; margin: 0; padding: 0; }
+</style>
+</head>
+<body>
+<div id="map"></div>
+<script>
+var map = L.map('map').setView([${center.lat}, ${center.lng}], ${zoom});
+L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', {
+  attribution: "<a href='https://maps.gsi.go.jp/development/ichiran.html' target='_blank'>地理院タイル</a>"
+}).addTo(map);
+
+var imageUrl = "${overlayImageUrl}";
+var bounds = [[${se.lat}, ${nw.lng}], [${nw.lat}, ${se.lng}]];
+L.imageOverlay(imageUrl, bounds, { opacity: ${opacity} }).addTo(map);
+<\/script>
+</body>
+</html>`;
+
+  var blob = new Blob([outputHtml], { type: "text/html;charset=utf-8" });
+  var link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = "overlay_map.html";
+  link.click();
+});
+</script>
+</body>
+</html>
