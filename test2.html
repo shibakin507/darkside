@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>GSI Tiles on Leaflet - Image Overlay Editor</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+
+<style>
+  html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+  }
+  #map {
+    height: 100vh;
+    width: 100vw;
+    position: absolute;
+    top: 0; bottom: 0; left: 0; right: 0;
+  }
+
+  /* 操作パネルのスタイル */
+  .map-control-panel {
+    background: rgba(255, 255, 255, 0.95);
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    width: 270px;
+    font-family: sans-serif;
+    font-size: 13px;
+    line-height: 1.5;
+    max-height: 90vh; /* スマホ画面からはみ出さないように縦幅を制限 */
+    overflow-y: auto;  /* パネル内が長くなったらスクロール可能に */
+  }
+  .map-control-panel h3 { margin: 0 0 10px 0; font-size: 14px; border-bottom: 1px solid #ccc; padding-bottom: 5px; }
+  .control-group { margin-bottom: 12px; }
+  .control-group label { display: block; font-weight: bold; margin-bottom: 4px; }
+  .control-group input[type="range"] { width: 100%; margin-top: 4px; }
+  .coords-display {
+    background: #f8f9fa;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-family: monospace;
+    white-space: pre-wrap;
+    font-size: 11px;
+    color: #333;
+  }
+  .btn-submit {
+    width: 100%;
+    padding: 10px;
+    background: #0078A8;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 13px;
+  }
+  .btn-submit:hover { background: #005A7E; }
+  .btn-submit:disabled { background: #ccc; cursor: not-allowed; }
+
+  /* Android/スマホ用に追加した出力エリアのスタイル */
+  .result-wrapper {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 2px dashed #ccc;
+  }
+  .code-textarea {
+    width: 100%;
+    height: 120px;
+    font-family: monospace;
+    font-size: 11px;
+    box-sizing: border-box;
+    padding: 6px;
+    border: 1px solid #bbb;
+    border-radius: 4px;
+    background: #fff;
+    resize: none;
+  }
+  .btn-copy {
+    width: 100%;
+    margin-top: 6px;
+    padding: 10px;
+    background: #28a745;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-weight: bold;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .btn-copy:hover { background: #218838; }
+</style>
+</head>
+
+<body>
+
+<div id="map"></div>
+
+<script>
+var map = L.map('map').setView([35.3622222, 138.7313889], 5);
+
+L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', {
+  attribution: "<a href='https://maps.gsi.go.jp/development/ichiran.html' target='_blank'>地理院タイル</a>"
+}).addTo(map);
+
+var overlayImage = null;
+var overlayImageUrl = null;
+var imageBounds = null;
+var handleMarkers = [];
+
+// パネルの設置
+var ControlPanel = L.Control.extend({
+  options: { position: 'topright' },
+  onAdd: function (map) {
+    var div = L.DomUtil.create('div', 'map-control-panel');
+    div.innerHTML = `
+      <h3>画像オーバーレイ設定</h3>
+      <div class="control-group">
+        <label>1. 画像ファイル選択</label>
+        <input type="file" id="imageLoader" accept="image/*">
+      </div>
+      <div class="control-group">
+        <label>2. 透過度調整</label>
+        <input type="range" id="opacitySlider" min="0" max="1" step="0.1" value="0.7">
+      </div>
+      <div class="control-group">
+        <label>3. 四隅の座標 (自動更新)</label>
+        <div id="coordsOutput" class="coords-display">画像が未選択です</div>
+      </div>
+      <div class="control-group" id="actionContainer">
+        <button id="exportHtmlBtn" class="btn-submit" disabled>4. HTMLコード生成</button>
+      </div>
+    `;
+    L.DomEvent.disableClickPropagation(div);
+    L.DomEvent.disableScrollPropagation(div);
+    return div;
+  }
+});
+map.addControl(new ControlPanel());
+
+var imageLoader = document.getElementById('imageLoader');
+var opacitySlider = document.getElementById('opacitySlider');
+var coordsOutput = document.getElementById('coordsOutput');
+var exportHtmlBtn = document.getElementById('exportHtmlBtn');
+var actionContainer = document.getElementById('actionContainer');
+
+// 画像読み込み
+imageLoader.addEventListener('change', function(e) {
+  var file = e.target.files[0];
+  if (!file) return;
+
+  var reader = new FileReader();
+  reader.onload = function(event) {
+    overlayImageUrl = event.target.result;
+    clearOverlay();
+
+    // 既存のテキストエリアが出っぱなしなら消す
+    var oldWrapper = document.getElementById('htmlResultWrapper');
+    if (oldWrapper) oldWrapper.remove();
+
+    var center = map.getCenter();
+    var zoom = map.getZoom();
+    var offset = 3 / Math.pow(2, zoom - 5);
+
+    var swLatlng = L.latLng(center.lat - offset, center.lng - offset * 1.5);
+    var neLatlng = L.latLng(center.lat + offset, center.lng + offset * 1.5);
+    imageBounds = L.latLngBounds(swLatlng, neLatlng);
+
+    overlayImage = L.imageOverlay(overlayImageUrl, imageBounds, {
+      opacity: parseFloat(opacitySlider.value),
+      interactive: false
+    }).addTo(map);
+
+    createHandles();
+    updateCoordsDisplay();
+    exportHtmlBtn.disabled = false;
+  };
+  reader.readAsDataURL(file);
+});
+
+opacitySlider.addEventListener('input', function(e) {
+  if (overlayImage) {
+    overlayImage.setOpacity(parseFloat(e.target.value));
+  }
+});
+
+function createHandles() {
+  if (!imageBounds) return;
+  var corners = [
+    { id: 'nw', getLngLat: function(b) { return [b.getWest(), b.getNorth()]; } },
+    { id: 'ne', getLngLat: function(b) { return [b.getEast(), b.getNorth()]; } },
+    { id: 'se', getLngLat: function(b) { return [b.getEast(), b.getSouth()]; } },
+    { id: 'sw', getLngLat: function(b) { return [b.getWest(), b.getSouth()]; } }
+  ];
+
+  corners.forEach(function(corner) {
+    var lngLat = corner.getLngLat(imageBounds);
+    var latlng = L.latLng(lngLat[1], lngLat[0]);
+
+    var icon = L.divIcon({
+      className: 'custom-drag-handle',
+      html: '<div style="background:#fff; border:3px solid #0078A8; width:16px; height:16px; border-radius:50%; box-shadow:0 1px 4px rgba(0,0,0,0.4); margin-left:-8px; margin-top:-8px; cursor:move;"></div>',
+      iconSize: [16, 16]
+    });
+
+    var marker = L.marker(latlng, { draggable: true, icon: icon, zIndexOffset: 1000 }).addTo(map);
+    marker.cornerId = corner.id;
+
+    marker.on('drag', function(e) { updateOverlayFromHandles(marker); });
+    handleMarkers.push(marker);
+  });
+}
+
+function updateOverlayFromHandles(draggedMarker) {
+  var draggedId = draggedMarker.cornerId;
+  var draggedLatLng = draggedMarker.getLatLng();
+
+  var nw, ne, se, sw;
+  handleMarkers.forEach(function(m) {
+    if (m.cornerId === 'nw') nw = m.getLatLng();
+    if (m.cornerId === 'ne') ne = m.getLatLng();
+    if (m.cornerId === 'se') se = m.getLatLng();
+    if (m.cornerId === 'sw') sw = m.getLatLng();
+  });
+
+  if (draggedId === 'nw') {
+    nw = draggedLatLng; ne = L.latLng(nw.lat, se.lng); sw = L.latLng(se.lat, nw.lng);
+  } else if (draggedId === 'ne') {
+    ne = draggedLatLng; nw = L.latLng(ne.lat, sw.lng); se = L.latLng(sw.lat, ne.lng);
+  } else if (draggedId === 'se') {
+    se = draggedLatLng; ne = L.latLng(nw.lat, se.lng); sw = L.latLng(se.lat, nw.lng);
+  } else if (draggedId === 'sw') {
+    sw = draggedLatLng; nw = L.latLng(sw.lat, ne.lng); se = L.latLng(ne.lat, sw.lng);
+  }
+
+  handleMarkers.forEach(function(m) {
+    if (m.cornerId === 'nw') m.setLatLng(nw);
+    if (m.cornerId === 'ne') m.setLatLng(ne);
+    if (m.cornerId === 'se') m.setLatLng(se);
+    if (m.cornerId === 'sw') m.setLatLng(sw);
+  });
+
+  imageBounds = L.latLngBounds(sw, ne);
+  if (overlayImage) overlayImage.setBounds(imageBounds);
+  updateCoordsDisplay();
+}
+
+function updateCoordsDisplay() {
+  if (!imageBounds) return;
+  var nw = imageBounds.getNorthWest();
+  var se = imageBounds.getSouthEast();
+  coordsOutput.innerText = `【北西 (NW)】\n緯度: ${nw.lat.toFixed(6)}\n経度: ${nw.lng.toFixed(6)}\n\n【南東 (SE)】\n緯度: ${se.lat.toFixed(6)}\n経度: ${se.lng.toFixed(6)}`;
+}
+
+function clearOverlay() {
+  if (overlayImage) { map.removeLayer(overlayImage); overlayImage = null; }
+  handleMarkers.forEach(function(m) { map.removeLayer(m); });
+  handleMarkers = [];
+}
+
+/* ＝★ Android対応：テキストエリアへの出力とコピー処理 ★＝ */
+exportHtmlBtn.addEventListener('click', function() {
+  if (!imageBounds || !overlayImageUrl) return;
+
+  var nw = imageBounds.getNorthWest();
+  var se = imageBounds.getSouthEast();
+  var center = map.getCenter();
+  var zoom = map.getZoom();
+  var opacity = opacitySlider.value;
+
+  // 出力するHTMLコードの組み立て
+  var outputHtml = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Generated Overlay Map</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"><\/script>
+<style>html, body, #map { height: 100%; margin: 0; padding: 0; }</style>
+</head>
+<body>
+<div id="map"></div>
+<script>
+var map = L.map('map').setView([${center.lat}, ${center.lng}], ${zoom});
+L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', {
+  attribution: "<a href='https://maps.gsi.go.jp/development/ichiran.html' target='_blank'>地理院タイル</a>"
+}).addTo(map);
+var imageUrl = "${overlayImageUrl}";
+var bounds = [[${se.lat}, ${nw.lng}], [${nw.lat}, ${se.lng}]];
+L.imageOverlay(imageUrl, bounds, { opacity: ${opacity} }).addTo(map);
+<\/script>
+</body>
+</html>`;
+
+  // 二重生成を防ぐため、古いエリアがあれば削除
+  var oldWrapper = document.getElementById('htmlResultWrapper');
+  if (oldWrapper) oldWrapper.remove();
+
+  // 新しいテキストエリア一式を作成
+  var wrapper = document.createElement('div');
+  wrapper.id = 'htmlResultWrapper';
+  wrapper.className = 'result-wrapper';
+
+  wrapper.innerHTML = `
+    <label style="font-weight:bold; display:block; margin-bottom:4px;">生成されたHTMLコード:</label>
+    <textarea id="codeTextArea" class="code-textarea" readonly>${outputHtml}</textarea>
+    <button id="copyCodeBtn" class="btn-copy">クリップボードにコピー</button>
+  `;
+
+  // パネル内のボタンの下に追加
+  actionContainer.appendChild(wrapper);
+
+  // コピーボタンの動作設定（Android/iOS対応）
+  document.getElementById('copyCodeBtn').addEventListener('click', function() {
+    var textArea = document.getElementById('codeTextArea');
+    
+    // テキストエリアを選択状態にする（モバイル用のおまじない）
+    textArea.select();
+    textArea.setSelectionRange(0, 99999); 
+
+    // クリップボードAPIを呼び出す
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(textArea.value).then(function() {
+        alert('コードをコピーしました！スマホのメモ帳アプリ等に貼り付けて「.html」という名前で保存してください。');
+      }).catch(function() {
+        alert('コピーに失敗しました。テキストエリアを長押しして手動で全選択コピーしてください。');
+      });
+    } else {
+      // 古いブラウザ向けのフォールバック法
+      try {
+        document.execCommand('copy');
+        alert('コードをコピーしました！(予備方式)');
+      } catch (err) {
+        alert('お使いのブラウザでは自動コピーができませんでした。エリア内を長押ししてコピーしてください。');
+      }
+    }
+  });
+});
+</script>
+</body>
+</html>
