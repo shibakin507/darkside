@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<title>富士軌道NAVI - Image Overlay Editor</title>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<link rel="stylesheet" href="https://shibakin507.github.io/-NAVI/dist/L.Control.Locate.min.css" />
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.locatecontrol/dist/L.Control.Locate.min.js"></script>
+<script src="https://unpkg.com/leaflet-rotate@0.2.8/dist/leaflet-rotate.js"></script>
+
+<style>
+  /* 基本レイアウト */
+  html, body, #map {
+    height: 100%;
+    margin: 0;
+  }
+  
+  /* 回転UIは非表示（Wagoneer準拠） */
+  .leaflet-compass,
+  .leaflet-control-rotate {
+    display: none !important;
+  }
+
+  /* iOSのガクガク対策（Wagoneer準拠） */
+  .leaflet-image-layer,
+  .leaflet-map-pane,
+  .leaflet-overlay-pane {
+     transform: translateZ(0);
+     will-change: transform;
+     backface-visibility: hidden;
+  }
+
+  /* 現在地アイコンの鼓動アニメーション（Wagoneer準拠） */
+  @keyframes pulseArrow {
+      0% { transform: scale(1); filter: drop-shadow(0 0 0px red); }
+      50% { transform: scale(1.28); filter: drop-shadow(0 0 14px red); }
+      100% { transform: scale(1); filter: drop-shadow(0 0 0px red); }
+  }
+  .arrow-svg.pulsing {
+      animation: pulseArrow 1.1s ease-in-out infinite;
+      transform-origin: center;
+  }
+
+  /* 操作パネルのスタイル（スマホ最適化・幅スリム化） */
+  .map-control-panel {
+    position: relative;
+    background: rgba(255, 255, 255, 0.95);
+    padding: 12px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    width: 180px; /* ★（文字が崩れない最小サイズ） */
+    font-family: sans-serif;
+    font-size: 13px;
+    line-height: 1.4;
+  }
+  .map-control-panel h3 { 
+    margin: 0 35px 10px 0; /* ボタンの枠線追加に伴い右マージンを少し拡張 */
+    font-size: 13px; 
+    border-bottom: 1px solid #ccc; 
+    padding-bottom: 5px; 
+  }
+  
+  /* 閉じる(≪)ボタン（黒い枠線を追加） */
+  .panel-close-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: #fff;
+    border: 1px solid #ccc; /* 灰色の枠線 */
+    border-radius: 3px; /* 少し角を丸める */
+    font-size: 13px;
+    font-weight: bold;
+    color: #000;
+    cursor: pointer;
+    text-align: center;
+    padding: 2px 6px; /* ボタンらしく余白を設定 */
+    line-height: 1.2;
+  }
+  .panel-close-btn:hover { 
+    background: #f0f0f0; 
+  }
+
+  .control-group { margin-bottom: 10px; }
+  .control-group label { display: block; font-weight: bold; margin-bottom: 4px; }
+  .control-group input[type="range"] { width: 100%; margin-top: 4px; }
+  
+  
+
+/* カスタムファイル入力ボタンスタイル */
+  .file-input-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* 1:1の等幅 */
+    gap: 6px;
+    margin-top: 4px;
+    position: relative;
+  }
+  
+  .file-input-wrapper {
+    position: relative;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  
+  .btn-file-select {
+    display: block;
+    background: #e1e1e1;
+    color: #333;
+    padding: 6px;
+    text-align: center;
+    border-radius: 4px;
+    font-weight: bold;
+    cursor: pointer;
+    border: 1px solid #ccc;
+    font-size: 12px;
+    box-sizing: border-box;
+    width: 100%;
+  }
+
+ /* ★ 生のinputファイルを完全に隠し、ボタンの「面」だけで反応するように修正 */
+  .file-input-wrapper input[type="file"] {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+    display: block;
+    
+    /* ハミ出る文字だけを確実に消し去り、タップ判定（面）は100%残す設定 */
+    overflow: hidden;
+    font-size: 0;
+  }
+  
+  /* ファイル破棄ボタンのスタイル */
+  .btn-file-clear {
+    background: #f5f5f5;
+    color: #cc0000;
+    padding: 6px;
+    text-align: center;
+    border-radius: 4px;
+    font-weight: bold;
+    cursor: pointer;
+    border: 1px solid #ccc;
+    font-size: 12px;
+    box-sizing: border-box;
+    display: block;
+    width: 100%;
+    margin: 0; /* 余計なマージンをリセット */
+  }
+  .btn-file-clear:hover {
+    background: #fee;
+    border-color: #b00;
+  }
+
+
+
+  .file-name-display {
+    display: block;
+    margin-top: 4px;
+    font-size: 11px;
+    color: #555;
+    word-break: break-all;
+    max-height: 32px;
+    overflow: hidden;
+  }
+
+  .coords-display {
+    background: #f8f9fa;
+    padding: 6px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-family: monospace;
+    white-space: pre-wrap;
+    font-size: 10px;
+    color: #333;
+  }
+  .btn-submit {
+    width: 100%;
+    padding: 8px;
+    background: #0078A8;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 13px;
+  }
+  .btn-submit:hover { background: #005A7E; }
+  .btn-submit:disabled { background: #ccc; cursor: not-allowed; }
+
+  /* 再表示ボタン（Leaflet純正スタイルに統合） */
+  .leaflet-control-show-panel a {
+    font-size: 16px;
+    font-weight: bold;
+    background-color: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+</style>
+</head>
+
+<body>
+
+<div id="map"></div>
+
+<script>
+/* ==========================================================
+   グローバル変数
+========================================================== */
+var map;
+var overlayImage = null;
+var overlayImageUrl = null;
+var imageBounds = null;
+var handleMarkers = [];
+var controlPanelInstance = null; // インスタンス保持用
+
+// ナビ用変数（Wagoneer準拠）
+let myMarker = null;
+let currentBearing = 0;
+const smooth = 0.15;
+let isLocateActive = false;
+let locateControl = null; // GPSコントロールインスタンス保持用
+
+/* ==========================================================
+   現在地アイコン（SVG矢印：Wagoneer準拠）
+========================================================== */
+const myArrowIcon = L.divIcon({
+    className: '',
+    html: `
+    <svg class="arrow-svg" width="36" height="48" viewBox="0 0 60 100">
+        <polygon points="34,8 58,100 34,84 10,100" fill="rgba(0,0,0,0.5)"/>
+        <polygon points="30,2 56,98 30,80 4,98" fill="#ffffff"/>
+        <polygon id="myArrow" points="30,6 52,94 30,78 8,94" fill="#ff0000"/>
+    </svg>`,
+    iconSize: [24, 36],
+    iconAnchor: [12, 18]
+});
+
+/* ==========================================================
+   初期化
+========================================================== */
+function init() {
+    // 1. マップの初期化（Wagoneer準拠オプション）
+    map = L.map('map', { 
+      zoomControl: false,
+      rotate: true,
+      bearing: 0,
+      zoomAnimation: true,
+      zoomAnimationThreshold: 1,
+      preferCanvas: true 
+    }).setView([35.3, 138.65], 12);
+
+    // 2. 地理院タイルの読み込み
+    L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', {
+      attribution: "<a href='https://maps.gsi.go.jp/development/ichiran.html' target='_blank'>地理院タイル</a>"
+    }).addTo(map);
+
+    /* ---------- 地図スケールの追加 ---------- */
+    L.control.scale({maxWidth: 200, position: "bottomright", imperial: false}).addTo(map);
+
+    /* ---------- GPSスイッチの追加（Wagoneer準拠） ---------- */
+    locateControl = L.control.locate({
+        position: "topright",
+        drawMarker: false,     
+        drawCircle: false,
+        showCompass: false,    
+        watch: true,
+        setView: 'once',
+        initialZoomLevel: 14,
+        locateOptions: { enableHighAccuracy: true },
+        strings: {
+            title: "現在地を表示"
+        }
+    }).addTo(map);
+
+    /* ---------- GPSイベント制御（Wagoneer準拠） ---------- */
+    map.on('locateactivate', () => {
+        isLocateActive = true;
+        setArrowColor('#ff0000'); 
+        requestOrientationPermission();
+    });
+
+    map.on('locatedeactivate', () => {
+        isLocateActive = false;
+        setArrowPulse(false);
+        setArrowColor('#888888'); 
+    });
+
+    map.on('locationfound', e => {
+        if (!myMarker) {
+            myMarker = L.marker(e.latlng, { icon: myArrowIcon }).addTo(map);
+        } else {
+            myMarker.setLatLng(e.latlng);
+        }
+
+        if (isLocateActive) {
+            setArrowColor('#ff0000'); 
+        } else {
+            setArrowColor('#888888'); 
+        }
+        setArrowPulse(true);
+    });
+
+    /* ---------- 再表示ボタンの定義 ---------- */
+    var ShowPanelControl = L.Control.extend({
+      options: { position: 'topleft' },
+      onAdd: function(map) {
+        var container = L.DomUtil.create('div', 'leaflet-bar leaflet-control leaflet-control-show-panel');
+        var button = L.DomUtil.create('a', '', container);
+        button.innerHTML = '≫';
+        button.title = 'コントロールパネルを表示';
+        button.href = '#';
+
+        L.DomEvent.on(button, 'click', function(e) {
+          L.DomEvent.stopPropagation(e);
+          L.DomEvent.preventDefault(e);
+
+          // 1. ナビ（GPS追跡）を停止
+          if (locateControl) {
+            locateControl.stop();
+          }
+
+          // 2. 地図の回転を止めて北向き（上が北）にリセット
+          if (typeof map.setBearing === 'function') {
+            map.setBearing(0);
+          }
+          currentBearing = 0;
+
+          togglePanel(true);
+        });
+        // 最初はパネルが出ているので、再表示ボタンは隠しておく
+        container.style.display = 'none';
+        return container;
+      }
+    });
+    var showPanelControl = new ShowPanelControl().addTo(map);
+
+    /* ---------- 編集用コントロールパネルの追加 ---------- */
+    var ControlPanel = L.Control.extend({
+      options: { position: 'topleft' }, 
+      onAdd: function (map) {
+        var div = L.DomUtil.create('div', 'map-control-panel');
+        div.id = 'controlPanelContainer';
+        div.innerHTML = `
+          <button type="button" class="panel-close-btn" id="panelCloseBtn" title="コントロールパネルを隠す">≪</button>
+          <h3>画像オーバーレイ設定</h3>
+          <div class="control-group">
+            <label>1. 画像ファイル選択</label>
+            <div class="file-input-container">
+              <div class="file-input-wrapper">
+                <span class="btn-file-select">選択</span>
+                <input type="file" id="imageLoader" accept="image/*">
+              </div>
+              <button type="button" id="fileClearBtn" class="btn-file-clear">破棄</button>
+            </div>
+            <div id="fileNameDisplay" class="file-name-display">選択されていません</div>
+          </div>
+          <div class="control-group">
+            <label>2. 透過度調整</label>
+            <input type="range" id="opacitySlider" min="0" max="1" step="0.1" value="0.7">
+          </div>
+          <div class="control-group">
+            <label>3. 画像を配置する座標</label>
+            <div id="coordsOutput" class="coords-display">画像が未選択です</div>
+          </div>
+          <div class="control-group">
+            <button id="exportHtmlBtn" class="btn-submit" disabled>4. 設定を決定する</button>
+          </div>
+        `;
+        L.DomEvent.disableClickPropagation(div);
+        L.DomEvent.disableScrollPropagation(div);
+        return div;
+      }
+    });
+    controlPanelInstance = new ControlPanel().addTo(map);
+
+    // パネルの開閉ロジックを一元管理する関数
+    function togglePanel(visible) {
+      var panelEl = document.getElementById('controlPanelContainer');
+      var showBtnEl = document.querySelector('.leaflet-control-show-panel');
+      if (visible) {
+        if (panelEl) panelEl.style.display = 'block';
+        if (showBtnEl) showBtnEl.style.display = 'none';
+      } else {
+        if (panelEl) panelEl.style.display = 'none';
+        if (showBtnEl) showBtnEl.style.display = 'block';
+      }
+    }
+
+    // ≪ボタンのイベント登録
+    document.getElementById('panelCloseBtn').addEventListener('click', function(e) {
+      togglePanel(false);
+    });
+
+    // グローバルに開閉関数を共有するための紐付け
+    controlPanelInstance.toggle = togglePanel;
+
+    // 要素オブジェクト取得
+    bindPanelEvents();
+}
+
+/* ==========================================================
+   矢印カラー・アニメーション制御関数
+========================================================== */
+function setArrowColor(color) {
+    const arrow = myMarker?.getElement()?.querySelector('#myArrow');
+    if (!arrow) return;
+    arrow.setAttribute('fill', color);
+}
+
+function setArrowPulse(on) {
+    const svg = myMarker?.getElement()?.querySelector('.arrow-svg');
+    if (!svg) return;
+    svg.classList.toggle('pulsing', on);
+}
+
+/* ==========================================================
+   方位センサー制御（Wagoneer準拠）
+========================================================== */
+function requestOrientationPermission() {
+    if (typeof DeviceOrientationEvent?.requestPermission === "function") {
+        DeviceOrientationEvent.requestPermission().then(res => {
+            if (res === 'granted')
+                window.addEventListener('deviceorientation', handleOrientation, true);
+        });
+    } else {
+        window.addEventListener('deviceorientationabsolute', handleOrientation, true);
+    }
+}
+
+function handleOrientation(e) {
+    // ナビ（GPS追跡）がアクティブな場合のみ回転を同期させる
+    if (!isLocateActive) return;
+    
+    let heading = e.webkitCompassHeading || e.alpha;
+    if (!heading) return;
+    const diff = ((heading - currentBearing + 540) % 360) - 180;
+    currentBearing += diff * smooth;
+    map.setBearing(currentBearing);
+}
+
+/* ==========================================================
+   画像読み込み・編集関連イベント
+========================================================= */
+function bindPanelEvents() {
+    var imageLoader = document.getElementById('imageLoader');
+    var fileClearBtn = document.getElementById('fileClearBtn');
+    var opacitySlider = document.getElementById('opacitySlider');
+    var coordsOutput = document.getElementById('coordsOutput');
+    var exportHtmlBtn = document.getElementById('exportHtmlBtn');
+    var fileNameDisplay = document.getElementById('fileNameDisplay');
+
+    imageLoader.addEventListener('change', function(e) {
+      var file = e.target.files[0];
+      if (!file) {
+        fileNameDisplay.innerText = "選択されていません";
+        return;
+      }
+      
+      // ファイル名を下に表示
+      fileNameDisplay.innerText = file.name;
+
+      var reader = new FileReader();
+      reader.onload = function(event) {
+        overlayImageUrl = event.target.result;
+        clearOverlay();
+
+        var center = map.getCenter();
+        var zoom = map.getZoom();
+        var offset = 3 / Math.pow(2, zoom - 5);
+
+        var swLatlng = L.latLng(center.lat - offset, center.lng - offset * 1.5);
+        var neLatlng = L.latLng(center.lat + offset, center.lng + offset * 1.5);
+        imageBounds = L.latLngBounds(swLatlng, neLatlng);
+
+        overlayImage = L.imageOverlay(overlayImageUrl, imageBounds, {
+          opacity: parseFloat(opacitySlider.value),
+          interactive: false
+        }).addTo(map);
+
+        createHandles();
+        updateCoordsDisplay();
+        exportHtmlBtn.disabled = false;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // 「ファイルを破棄」ボタンのクリックイベント
+    fileClearBtn.addEventListener('click', function() {
+      imageLoader.value = '';
+      overlayImageUrl = null;
+      imageBounds = null;
+      fileNameDisplay.innerText = "選択されていません";
+      clearOverlay();
+      coordsOutput.innerText = "画像が未選択です";
+      exportHtmlBtn.disabled = true;
+    });
+
+    opacitySlider.addEventListener('input', function(e) {
+      if (overlayImage) {
+        overlayImage.setOpacity(parseFloat(e.target.value));
+      }
+    });
+
+    // 5. HTML出力処理
+    exportHtmlBtn.addEventListener('click', function() {
+      if (!imageBounds || !overlayImageUrl) return;
+
+      // ハンドルを外して固定化
+      handleMarkers.forEach(function(m) { map.removeLayer(m); });
+      handleMarkers = [];
+
+      var nw = imageBounds.getNorthWest();
+      var se = imageBounds.getSouthEast();
+      var imageCenter = imageBounds.getCenter(); // 画像の中心座標を取得
+      var zoom = map.getZoom();
+      var opacity = opacitySlider.value;
+
+      var outputHtml = `<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<title>Generated Overlay Map</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<link rel="stylesheet" href="https://shibakin507.github.io/-NAVI/dist/L.Control.Locate.min.css" />
+<style>
+  html, body, #mapcontainer { height: 100%; margin: 0; }
+  .leaflet-compass, .leaflet-control-rotate { display: none !important; }
+  .leaflet-image-layer, .leaflet-map-pane, .leaflet-overlay-pane {
+     transform: translateZ(0); will-change: transform; backface-visibility: hidden;
+  }
+  @keyframes pulseArrow {
+      0% { transform: scale(1); filter: drop-shadow(0 0 0px red); }
+      50% { transform: scale(1.28); filter: drop-shadow(0 0 14px red); }
+      100% { transform: scale(1); filter: drop-shadow(0 0 0px red); }
+  }
+  .arrow-svg.pulsing { animation: pulseArrow 1.1s ease-in-out infinite; transform-origin: center; }
+</style>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"><\/script>
+<script src="https://unpkg.com/leaflet.locatecontrol/dist/L.Control.Locate.min.js"><\/script>
+<script src="https://unpkg.com/leaflet-rotate@0.2.8/dist/leaflet-rotate.js"><\/script>
+</head>
+<body>
+<div id="mapcontainer"></div>
+<script>
+let map;
+let myMarker = null;
+let currentBearing = 0;
+const smooth = 0.15;
+let isLocateActive = false;
+
+const myArrowIcon = L.divIcon({
+    className: '',
+    html: \`
+    <svg class="arrow-svg" width="36" height="48" viewBox="0 0 60 100">
+        <polygon points="34,8 58,100 34,84 10,100" fill="rgba(0,0,0,0.5)"/>
+        <polygon points="30,2 56,98 30,80 4,98" fill="#ffffff"/>
+        <polygon id="myArrow" points="30,6 52,94 30,78 8,94" fill="#ff0000"/>
+    </svg>\`,
+    iconSize: [24, 36],
+    iconAnchor: [12, 18]
+});
+
+function init() {
+    // 表示初期位置を現在の地図上の中心ではなく、画像の中心に指定
+    map = L.map('mapcontainer', {
+        zoomControl: false,
+        rotate: true,
+        bearing: 0,
+        zoomAnimation: true,
+        zoomAnimationThreshold: 1,
+        preferCanvas: true 
+    }).setView([${imageCenter.lat}, ${imageCenter.lng}], ${zoom});
+
+    L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', {
+      attribution: "<a href='https://maps.gsi.go.jp/development/ichiran.html' target='_blank'>地理院タイル</a>"
+    }).addTo(map);
+
+    L.control.scale({maxWidth: 200, position: "bottomright", imperial: false}).addTo(map);
+
+    L.control.locate({
+     position: "topright",
+     drawMarker: false,
+     drawCircle: false,
+     showCompass: false,
+     watch: true,
+     setView: 'once',
+     initialZoomLevel: 14,
+     locateOptions: { enableHighAccuracy: true },
+     strings: {
+         title: "現在地を表示"
+     }
+    }).addTo(map);
+
+    map.on('locateactivate', () => {
+        isLocateActive = true;
+        setArrowColor('#ff0000');
+        requestOrientationPermission();
+    });
+    map.on('locatedeactivate', () => {
+        isLocateActive = false;
+        setArrowPulse(false);
+        setArrowColor('#888888');
+    });
+    map.on('locationfound', e => {
+        if (!myMarker) { myMarker = L.marker(e.latlng, { icon: myArrowIcon }).addTo(map); }
+        else { myMarker.setLatLng(e.latlng); }
+        if (isLocateActive) { setArrowColor('#ff0000'); } 
+        else { setArrowColor('#888888'); }
+        setArrowPulse(true);
+    });
+
+    var imageUrl = "${overlayImageUrl}";
+    var bounds = [[${se.lat}, ${nw.lng}], [${nw.lat}, ${se.lng}]];
+    L.imageOverlay(imageUrl, bounds, { opacity: ${opacity} }).addTo(map);
+}
+
+function setArrowColor(color) {
+    const arrow = myMarker?.getElement()?.querySelector('#myArrow');
+    if (!arrow) return;
+    arrow.setAttribute('fill', color);
+}
+function setArrowPulse(on) {
+    const svg = myMarker?.getElement()?.querySelector('.arrow-svg');
+    if (!svg) return;
+    svg.classList.toggle('pulsing', on);
+}
+function requestOrientationPermission() {
+    if (typeof DeviceOrientationEvent?.requestPermission === "function") {
+        DeviceOrientationEvent.requestPermission().then(res => {
+            if (res === 'granted') window.addEventListener('deviceorientation', handleOrientation, true);
+        });
+    } else {
+        window.addEventListener('deviceorientationabsolute', handleOrientation, true);
+    }
+}
+function handleOrientation(e) {
+    if (!isLocateActive) return;
+    let heading = e.webkitCompassHeading || e.alpha;
+    if (!heading) return;
+    const diff = ((heading - currentBearing + 540) % 360) - 180;
+    currentBearing += diff * smooth;
+    map.setBearing(currentBearing);
+}
+init();
+<\/script>
+</body>
+</html>`;
+
+      var blob = new Blob([outputHtml], { type: "text/html;charset=utf-8" });
+      var link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "overlay_map.html";
+      link.click();
+
+      // HTML出力完了後にパネルを自動非表示にする
+      if (controlPanelInstance && typeof controlPanelInstance.toggle === 'function') {
+        controlPanelInstance.toggle(false);
+      }
+    });
+}
+
+function createHandles() {
+  if (!imageBounds) return;
+  var corners = [
+    { id: 'nw', getLngLat: function(b) { return [b.getWest(), b.getNorth()]; } },
+    { id: 'ne', getLngLat: function(b) { return [b.getEast(), b.getNorth()]; } },
+    { id: 'se', getLngLat: function(b) { return [b.getEast(), b.getSouth()]; } },
+    { id: 'sw', getLngLat: function(b) { return [b.getWest(), b.getSouth()]; } }
+  ];
+  corners.forEach(function(corner) {
+    var lngLat = corner.getLngLat(imageBounds);
+    var latlng = L.latLng(lngLat[1], lngLat[0]);
+    var icon = L.divIcon({
+      className: 'custom-drag-handle',
+      html: '<div style="background:#fff; border:3px solid #0078A8; width:14px; height:14px; border-radius:50%; box-shadow:0 1px 4px rgba(0,0,0,0.4); box-sizing:border-box; cursor:move;"></div>',
+      iconSize: [14, 14],
+      iconAnchor: [7, 7]
+    });
+    var marker = L.marker(latlng, { draggable: true, icon: icon, zIndexOffset: 1000 }).addTo(map);
+    marker.cornerId = corner.id;
+    marker.on('drag', function(e) { updateOverlayFromHandles(marker); });
+    handleMarkers.push(marker);
+  });
+}
+
+function updateOverlayFromHandles(draggedMarker) {
+  var draggedId = draggedMarker.cornerId;
+  var draggedLatLng = draggedMarker.getLatLng();
+  var nw, ne, se, sw;
+  handleMarkers.forEach(function(m) {
+    if (m.cornerId === 'nw') nw = m.getLatLng();
+    if (m.cornerId === 'ne') ne = m.getLatLng();
+    if (m.cornerId === 'se') se = m.getLatLng();
+    if (m.cornerId === 'sw') sw = m.getLatLng();
+  });
+  if (draggedId === 'nw') { nw = draggedLatLng; ne = L.latLng(nw.lat, se.lng); sw = L.latLng(se.lat, nw.lng); }
+  else if (draggedId === 'ne') { ne = draggedLatLng; nw = L.latLng(ne.lat, sw.lng); se = L.latLng(sw.lat, ne.lng); }
+  else if (draggedId === 'se') { se = draggedLatLng; ne = L.latLng(nw.lat, se.lng); sw = L.latLng(se.lat, nw.lng); }
+  else if (draggedId === 'sw') { sw = draggedLatLng; nw = L.latLng(sw.lat, ne.lng); se = L.latLng(ne.lat, sw.lng); }
+
+  handleMarkers.forEach(function(m) {
+    if (m.cornerId === 'nw') m.setLatLng(nw);
+    if (m.cornerId === 'ne') m.setLatLng(ne);
+    if (m.cornerId === 'se') m.setLatLng(se);
+    if (m.cornerId === 'sw') m.setLatLng(sw);
+  });
+  imageBounds = L.latLngBounds(sw, ne);
+  if (overlayImage) { overlayImage.setBounds(imageBounds); }
+  updateCoordsDisplay();
+}
+
+function updateCoordsDisplay() {
+  if (!imageBounds) return;
+  var nw = imageBounds.getNorthWest();
+  var se = imageBounds.getSouthEast();
+  document.getElementById('coordsOutput').innerText = 
+    `【北西 (NW)】\n緯度: ${nw.lat.toFixed(6)}\n経度: ${nw.lng.toFixed(6)}\n\n` +
+    `【南東 (SE)】\n緯度: ${se.lat.toFixed(6)}\n経度: ${se.lng.toFixed(6)}`;
+}
+
+function clearOverlay() {
+  if (overlayImage) { map.removeLayer(overlayImage); overlayImage = null; }
+  handleMarkers.forEach(function(m) { map.removeLayer(m); });
+  handleMarkers = [];
+}
+
+// 起動
+init();
+</script>
+</body>
+</html>
