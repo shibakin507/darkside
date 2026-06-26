@@ -87,7 +87,7 @@
   .control-group label { display: block; font-weight: bold; margin-bottom: 4px; }
   .control-group input[type="range"] { width: 100%; margin-top: 4px; }
   
-/* ★案内メッセージのスタイル設定（サイズ変更・色変更） */
+/* 画像配置のメッセージのスタイル設定（サイズ変更・色変更） */
   .control-hint {
     display: block;
     font-size: 11px;    /* 11pxから10pxに小さく変更 */
@@ -358,7 +358,7 @@ function init() {
           <button type="button" class="panel-close-btn" id="panelCloseBtn" title="コントロールパネルを隠す">≪</button>
           <h3>画像オーバーレイ設定</h3>
           <div class="control-group">
-            <label>1. 画像ファイル選択</label>
+            <label>1. 画像ファイルを選択</label>
             <div class="file-input-container">
               <div class="file-input-wrapper">
                 <span class="btn-file-select">選択</span>
@@ -369,12 +369,12 @@ function init() {
             <div id="fileNameDisplay" class="file-name-display">選択されていません</div>
           </div>
           <div class="control-group">
-            <label>2. 透過度調整</label>
+            <label>2. 透過度を調整する</label>
             <input type="range" id="opacitySlider" min="0" max="1" step="0.1" value="0.7">
           </div>
           <div class="control-group">
-            <label>3. 画像配置</label>
-            <span class="control-hint">四隅の○を動かして配置して下さい。スマホの場合は右上の ≪ をクリックしてパネルを隠すと便利です。</span>
+            <label>3. 画像を配置する</label>
+            <span class="control-hint">四隅の〇を動かして配置して下さい。スマホの場合は右上の ≪ をクリックしてパネルを隠すと使いやすくなります。</span>
             <div id="coordsOutput" class="coords-display">画像が未選択です</div>
           </div>
           <div class="control-group">
