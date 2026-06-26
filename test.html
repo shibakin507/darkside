@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-<title>富士軌道NAVI - Image Overlay Editor</title>
+<title>なんちゃってNAVI／Overlay Editor</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 <link rel="stylesheet" href="https://shibakin507.github.io/-NAVI/dist/L.Control.Locate.min.css" />
@@ -508,7 +508,10 @@ function bindPanelEvents() {
       }
     });
 
-    // 5. HTML出力処理
+  
+    //////////////////////////////////////////////////////////////////
+    ////////////////////// 5. HTML出力処理/////////////////////////////
+    //////////////////////////////////////////////////////////////////
     exportHtmlBtn.addEventListener('click', function() {
       if (!imageBounds || !overlayImageUrl) return;
 
@@ -521,13 +524,13 @@ function bindPanelEvents() {
       var imageCenter = imageBounds.getCenter(); // 画像の中心座標を取得
       var zoom = map.getZoom();
       var opacity = opacitySlider.value;
-
       var outputHtml = `<!DOCTYPE html>
+      
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-<title>Generated Overlay Map</title>
+<title>Generated なんちゃってNAVI</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 <link rel="stylesheet" href="https://shibakin507.github.io/-NAVI/dist/L.Control.Locate.min.css" />
 <style>
@@ -654,6 +657,7 @@ init();
 </body>
 </html>`;
 
+  
       var blob = new Blob([outputHtml], { type: "text/html;charset=utf-8" });
       var link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
@@ -667,6 +671,12 @@ init();
     });
 }
 
+    //////////////////////////////////////////////////////////////////
+    /////////////////// 5. HTML出力処理(おわり)////////////////////////
+    //////////////////////////////////////////////////////////////////
+
+
+  
 function createHandles() {
   if (!imageBounds) return;
   var corners = [
