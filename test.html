@@ -574,8 +574,8 @@ function updateCoordsDisplay() {
   var nw = imageBounds.getNorthWest();
   var se = imageBounds.getSouthEast();
   document.getElementById('coordsOutput').innerText = 
-    `【画像左上ポイント (NW)】\n緯度: ${nw.lat.toFixed(6)}\n経度: ${nw.lng.toFixed(6)}\n\n` +
-    `【画像右下ポイント (SE)】\n緯度: ${se.lat.toFixed(6)}\n経度: ${se.lng.toFixed(6)}`;
+    `【画像左上ポイント】\n緯度: ${nw.lat.toFixed(6)}\n経度: ${nw.lng.toFixed(6)}\n\n` +
+    `【画像右下ポイント】\n緯度: ${se.lat.toFixed(6)}\n経度: ${se.lng.toFixed(6)}`;
 }
 
 function clearOverlay() {
