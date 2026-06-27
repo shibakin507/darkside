@@ -359,24 +359,25 @@ function init() {
             <div id="fileNameDisplay" class="file-name-display">⭐選択されていません</div>
           </div>
           <div class="control-group">
-            <label>2. 画像の透過度を調整する</label>
+            <label>2. 画像の透過度を調整しながら配置する</label>
             <input type="range" id="opacitySlider" min="0" max="1" step="0.1" value="0.7">
-          </div>
-          <div class="control-group">
-            <label>3. 画像を配置する</label>
             <span class="control-hint">⭐画像中央の赤色の ＋ を動かして移動してください。スマホの場合は右上の ≪ をクリックしてパネルを隠すと使いやすくなります。</span>
-            <div id="coordsOutput" class="coords-display">画像が未選択です</div>
           </div>
+          //<div class="control-group">
+            //<label>3. 画像を配置する</label>
+            //<span class="control-hint">⭐画像中央の赤色の ＋ を動かして移動してください。スマホの場合は右上の ≪ をクリックしてパネルを隠すと使いやすくなります。</span>
+            //<div id="coordsOutput" class="coords-display">画像が未選択です</div>
+          //</div>
           <div class="control-group">
-            <label>4. 画像のサイズを調整する</label>
+            <label>3. 画像のサイズを調整する</label>
             <span class="control-hint">横幅拡大縮小 (%) :</span>
             <input type="range" id="widthSlider" min="10" max="300" step="1" value="100">
             <span class="control-hint">縦幅拡大縮小 (%) :</span>
             <input type="range" id="heightSlider" min="10" max="300" step="1" value="100">
           </div>
           <div class="control-group">
-            <button id="exportHtmlBtn" class="btn-submit" disabled>5. 決定する</button>
-            <span class="control-hint">⭐このボタンをクリックすると中央の ＋ が消えて画像がセットされます。</span>
+            <button id="exportHtmlBtn" class="btn-submit" disabled>4. 決定する</button>
+            //<span class="control-hint">⭐このボタンをクリックすると中央の ＋ が消えて画像がセットされます。</span>
           </div>
         `;
         L.DomEvent.disableClickPropagation(div);
@@ -574,17 +575,17 @@ function updateOverlay() {
   imageBounds = L.latLngBounds(swLatlng, neLatlng);
 
   overlayImage.setBounds(imageBounds);
-  updateCoordsDisplay();
+  //updateCoordsDisplay();
 }
 
-function updateCoordsDisplay() {
-  if (!imageBounds) return;
-  var nw = imageBounds.getNorthWest();
-  var se = imageBounds.getSouthEast();
-  document.getElementById('coordsOutput').innerText = 
-    `【画像左上ポイント】\n緯度: ${nw.lat.toFixed(6)}\n経度: ${nw.lng.toFixed(6)}\n\n` +
-    `【画像右下ポイント】\n緯度: ${se.lat.toFixed(6)}\n経度: ${se.lng.toFixed(6)}`;
-}
+//function updateCoordsDisplay() {
+ // if (!imageBounds) return;
+ // var nw = imageBounds.getNorthWest();
+ // var se = imageBounds.getSouthEast();
+ // document.getElementById('coordsOutput').innerText = 
+   // `【画像左上ポイント】\n緯度: ${nw.lat.toFixed(6)}\n経度: ${nw.lng.toFixed(6)}\n\n` +
+   // `【画像右下ポイント】\n緯度: ${se.lat.toFixed(6)}\n経度: ${se.lng.toFixed(6)}`;
+//}
 
 function clearOverlay() {
   if (overlayImage) { map.removeLayer(overlayImage); overlayImage = null; }
