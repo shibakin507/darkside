@@ -461,7 +461,7 @@ function bindPanelEvents() {
     imageLoader.addEventListener('change', function(e) {
       var file = e.target.files[0];
       if (!file) {
-        fileNameDisplay.innerText = "選択されていません";
+        fileNameDisplay.innerText = "⭐選択されていません";
         return;
       }
       
@@ -521,7 +521,7 @@ function bindPanelEvents() {
       imageLoader.value = '';
       overlayImageUrl = null;
       imageBounds = null;
-      fileNameDisplay.innerText = "選択されていません";
+      fileNameDisplay.innerText = "⭐選択されていません";
       clearOverlay();
       exportHtmlBtn.disabled = true;
     });
