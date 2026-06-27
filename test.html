@@ -262,10 +262,15 @@ function init() {
     }).setView([35.3, 138.65], 12);
 
     // 2. 地理院タイルの読み込み
-    L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', {
-      attribution: "<a href='https://maps.gsi.go.jp/development/ichiran.html' target='_blank'>地理院タイル</a>｜<a href='http://fujisanwalker.blog.fc2.com/' target='_blank'>富士山Walker</a>"
+    //L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', {
+    //  attribution: "<a href='https://maps.gsi.go.jp/development/ichiran.html' target='_blank'>地理院タイル</a>｜<a href='http://fujisanwalker.blog.fc2.com/' target='_blank'>富士山Walker</a>"
+    //}).addTo(map);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: "<a href='https://www.openstreetmap.org/copyright' target='_blank'>OpenStreetMap</a>｜<a href='http://fujisanwalker.blog.fc2.com/' target='_blank'>富士山Walker</a>"
     }).addTo(map);
 
+  
     // 地図スケールの追加
     L.control.scale({maxWidth: 200, position: "bottomright", imperial: false}).addTo(map);
 
