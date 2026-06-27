@@ -7,7 +7,7 @@
 <meta name="keywords" content="なんちゃって,NAVI,ナビゲーション,道案内,観光地案内,観光案内,富士山,富士宮市,leaflet,地図">
 <meta name="description" content="「なんちゃってNAVI」はWeb地図を作成するためのJavaScript（ Leaflet ）と、国土地理院の地図タイルを活用してスマホで観光地の道案内をサポートするシステムです。">
 
-<title>Overlay Editor For N-NAVI</title>
+<title>なんちゃってNAVI Overlay Editor</title>
 
 <link rel="stylesheet" href="https://shibakin507.github.io/-NAVI/dist/leaflet.css" />
 <link rel="stylesheet" href="https://shibakin507.github.io/-NAVI/dist/L.Control.Locate.min.css" />
@@ -347,12 +347,12 @@ function init() {
         div.id = 'controlPanelContainer';
         div.innerHTML = `
           <button type="button" class="panel-close-btn" id="panelCloseBtn" title="コントロールパネルを隠す">≪</button>
-          <h3>画像オーバーレイ設定</h3>
+          <h3>画像のオーバーレイ設定</h3>
           <div class="control-group">
             <label>1. 画像ファイルを選択</label>
             <div class="file-input-container">
               <div class="file-input-wrapper">
-                <span class="btn-file-select">選択</span>
+                <span class="btn-file-select">選択する</span>
                 <input type="file" id="imageLoader" accept="image/*">
               </div>
               <button type="button" id="fileClearBtn" class="btn-file-clear">やり直す</button>
