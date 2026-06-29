@@ -377,13 +377,13 @@ function init() {
                 </div>
                 <button type="button" id="fileClearBtn" class="btn-file-clear">やり直す</button>
               </div>
-              <div id="fileNameDisplay" class="file-name-display">⭐選択されていません</div>
+              <div id="fileNameDisplay" class="file-name-display">選択されていません</div>
             </div>
           </div>
 
           <div id="step2" class="step-content">
             <div class="control-group">
-              <label>2. 画像の位置を調整</label>
+              <label>2. 目標地の設定</label>
               <span class="control-hint">目標地に<font color="#ff0000"> ＋ </font>を設置してください。</span>
             </div>
           </div>
@@ -398,7 +398,7 @@ function init() {
           <div id="step4" class="step-content">
             <div class="control-group">
               <label>4. 画像の移動・重ね合わせ</label>
-              <span class="control-hint">目標値の<font color="#ff0000"> ＋ </font>にカーソルを当てて画像を移動させベースマップの同位置に重ねてください。</span>
+              <span class="control-hint">目標値の<font color="#ff0000"> ＋ </font>にカーソルを当てて画像を移動させベースマップの同じ位置に重ねてください。</span>
             </div>
           </div>
 
@@ -416,7 +416,7 @@ function init() {
             <div class="control-group">
               <label>6. 設定の確定</label>
               <span class="control-hint">現在の配置で確定し、ナビゲーション画面へ移行します。</span>
-              <button id="exportHtmlBtn" class="btn-submit" disabled>決定する</button>
+              <button id="exportHtmlBtn" class="btn-submit" disabled>設定を確定する</button>
             </div>
           </div>
         `;
@@ -566,7 +566,7 @@ function bindPanelEvents() {
     imageLoader.addEventListener('change', function(e) {
       var file = e.target.files[0];
       if (!file) {
-        fileNameDisplay.innerText = "⭐選択されていません";
+        fileNameDisplay.innerText = "選択されていません";
         return;
       }
       
@@ -639,7 +639,7 @@ function bindPanelEvents() {
     fileClearBtn.addEventListener('click', function() {
       imageLoader.value = '';
       overlayImageUrl = null;
-      fileNameDisplay.innerText = "⭐選択されていません";
+      fileNameDisplay.innerText = "選択されていません";
       clearOverlay();
       exportHtmlBtn.disabled = true;
       
