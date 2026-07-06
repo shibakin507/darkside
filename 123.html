@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>富士山 3D立体地図（高解像度Canvas・標準地図レベル14）</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { margin: 0; overflow: hidden; font-family: sans-serif; }
+        #canvas-container { width: 100vw; height: 100vh; }
+        
+        /* UIコンテナの2行2列化とスマホ対応 */
+        #ui-container {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            z-index: 10;
+            width: 90%;
+            max-width: 500px;
+            box-sizing: border-box;
+        }
+        .ui-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            background: rgba(0, 0, 0, 0.03);
+            padding: 10px;
+            border-radius: 8px;
+        }
+        .ui-group label {
+            font-size: 13px;
+            font-weight: bold;
+            color: #333;
+            text-align: center;
+            white-space: nowrap;
+        }
+        /* スライダーをスマホでも操作しやすく大きく調整 */
+        .slider {
+            width: 100%;
+            height: 10px;
+            -webkit-appearance: none;
+            background: #ddd;
+            outline: none;
+            border-radius: 5px;
+        }
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #0066cc;
+            cursor: pointer;
+        }
+        .slider::-moz-range-thumb {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #0066cc;
+            cursor: pointer;
+        }
+        .credit {
+            position: absolute;
+            bottom: 5px;
+            right: 10px;
+            font-size: 11px;
+            color: #333;
+            background: rgba(255,255,255,0.7);
+            padding: 2px 5px;
+            z-index: 10;
+        }
+        .credit a { color: #0066cc; text-decoration: none; }
+
+        /* 画面が極端に狭いスマホ向けの微調整 */
+        @media (max-width: 400px) {
+            #ui-container { gap: 8px; padding: 10px; }
+            .ui-group { padding: 6px; gap: 4px; }
+            .ui-group label { font-size: 11px; }
+        }
+    </style>
+    <!-- Three.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+    <div id="canvas-container"></div>
+
+    <!-- コントロールパネル（2行2列構成に変更） -->
+    <div id="ui-container">
+        <div class="ui-group">
+            <label id="label-rotate" for="rotate-slider">水平回転 (360度)</label>
+            <input type="range" id="rotate-slider" class="slider" min="0" max="360" value="360">
+        </div>
+        <div class="ui-group">
+            <label id="label-height" for="height-slider">上下移動 (－80)</label>
+            <input type="range" id="height-slider" class="slider" min="-100" max="150" value="-80">
+        </div>
+        <div class="ui-group">
+            <label id="label-zoom" for="zoom-slider">拡大・縮小 (227)</label>
+            <input type="range" id="zoom-slider" class="slider" min="80" max="600" value="227">
+        </div>
+        <div class="ui-group">
+            <label id="label-opacity" for="opacity-slider">透過度 (画像: 70%)</label>
+            <input type="range" id="opacity-slider" class="slider" min="0" max="100" value="70">
+        </div>
+    </div>
+
+    <div class="credit">
+        背景：<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank">国土地理院（標準地図[Canvas高解像化]、陰影起伏図、DEMタイル）</a>
+    </div>
+
+    <script>
+        // --- 設定パラメータ ---
+        const bounds = {
+            nw: { lat: 35.405, lng: 138.671 },
+            se: { lat: 35.275, lng: 138.823 }
+        };
+
+        const overlayImgUrl = "https://shibakin507.github.io/-NAVI/data/kyuyourin.jpg";
+        const overlayBounds = {
+            nw: { lat: 35.3905, lng: 138.6706 },
+            se: { lat: 35.2745, lng: 138.8222 }
+        };
+
+        const centerCoords = { lat: 35.3606, lng: 138.7275 };
+        const ZOOM = 12;
+        const STD_ZOOM = ZOOM + 2; // 標準地図は2レベル深い詳細地図（レベル14）を取得
+        const ELEVATION_SCALE = 0.02; 
+
+        // 固定化された透過度
+        const OPACITY_HILLSHADE = 0.40; // 陰影起伏図：40%
+        const OPACITY_STD = 1.00;       // 標準地図：100%
+
+        // --- 経緯度・タイル座標変換関数 ---
+        function lngToTileX(lng, zoom) {
+            return Math.floor((lng + 180) / 360 * Math.pow(2, zoom));
+        }
+        function latToTileY(lat, zoom) {
+            return Math.floor((1 - Math.log(Math.tan(lat * Math.PI / 180) + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2 * Math.pow(2, zoom));
+        }
+        function tileXToLng(x, zoom) {
+            return x / Math.pow(2, zoom) * 360 - 180;
+        }
+        function tileYToLat(y, zoom) {
+            const n = Math.PI - 2 * Math.PI * y / Math.pow(2, zoom);
+            return 180 / Math.PI * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n)));
+        }
+
+        const minX = lngToTileX(bounds.nw.lng, ZOOM);
+        const maxX = lngToTileX(bounds.se.lng, ZOOM);
+        const minY = latToTileY(bounds.nw.lat, ZOOM);
+        const maxY = latToTileY(bounds.se.lat, ZOOM);
+
+        const tileWidthCount = maxX - minX + 1;
+        const tileHeightCount = maxY - minY + 1;
+
+        const totalLngWidth = tileXToLng(maxX + 1, ZOOM) - tileXToLng(minX, ZOOM);
+        const totalLatHeight = tileYToLat(minY, ZOOM) - tileYToLat(maxY + 1, ZOOM);
+        
+        const sceneWidth = tileWidthCount * 100;
+        const sceneHeight = tileHeightCount * 100;
+
+        const minLng = tileXToLng(minX, ZOOM);
+        const maxLat = tileYToLat(minY, ZOOM);
+
+        function coordsToScenePos(lat, lng) {
+            const x = ((lng - minLng) / totalLngWidth) * sceneWidth - (sceneWidth / 2);
+            const z = ((maxLat - lat) / totalLatHeight) * sceneHeight - (sceneHeight / 2);
+            return { x, z };
+        }
+
+        // --- Three.js 初期化 ---
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xf0f0f0);
+
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 5000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        container.appendChild(renderer.domElement);
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.4);
+        dirLight.position.set(200, 500, 200);
+        scene.add(dirLight);
+
+        // --- 地形（セグメント）の構築 ---
+        const segmentsX = tileWidthCount * 32; 
+        const segmentsY = tileHeightCount * 32;
+
+        const geometry = new THREE.PlaneGeometry(sceneWidth, sceneHeight, segmentsX, segmentsY);
+        geometry.rotateX(-Math.PI / 2);
+
+        const material = new THREE.MeshStandardMaterial({
+            color: 0xffffff,
+            roughness: 0.8,
+            metalness: 0.1,
+            side: THREE.DoubleSide
+        });
+        const terrainMesh = new THREE.Mesh(geometry, material);
+        scene.add(terrainMesh);
+
+        // --- キャンバス構造 ---
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = tileWidthCount * 1024;
+        canvas.height = tileHeightCount * 1024;
+
+        const hillshadeCanvas = document.createElement('canvas');
+        const hillshadeCtx = hillshadeCanvas.getContext('2d');
+        hillshadeCanvas.width = canvas.width;
+        hillshadeCanvas.height = canvas.height;
+
+        const stdCanvas = document.createElement('canvas');
+        const stdCtx = stdCanvas.getContext('2d');
+        stdCanvas.width = canvas.width;
+        stdCanvas.height = canvas.height;
+
+        const demCanvas = document.createElement('canvas');
+        const demCtx = demCanvas.getContext('2d');
+        demCanvas.width = tileWidthCount * 256;
+        demCanvas.height = tileHeightCount * 256;
+
+        let loadedCount = 0;
+        const totalTiles = tileWidthCount * tileHeightCount;
+        
+        const totalTasks = (totalTiles * 2) + (totalTiles * 16) + 1; 
+
+        const targetPos = coordsToScenePos(centerCoords.lat, centerCoords.lng);
+        let baseTargetY = 15; 
+
+        // リソース管理
+        const imgOverlay = new Image();
+        let texture = null;
+
+        // 1. カスタムオーバーレイ画像の読み込み
+        imgOverlay.crossOrigin = "anonymous";
+        imgOverlay.src = overlayImgUrl;
+        imgOverlay.onload = () => {
+            checkProgress();
+        };
+
+        // テクスチャメインキャンバスの再描画マージ関数
+        function updateTextureCanvas() {
+            const currentOpacity = parseFloat(document.getElementById('opacity-slider').value) / 100;
+            
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 陰影起伏図を描画 (固定値を使用)
+            ctx.globalAlpha = OPACITY_HILLSHADE;
+            ctx.drawImage(hillshadeCanvas, 0, 0);
+
+            // 詳細標準地図を描画（固定値を使用・乗算モード）
+            ctx.globalAlpha = OPACITY_STD;
+            ctx.globalCompositeOperation = "multiply";
+            ctx.drawImage(stdCanvas, 0, 0);
+            
+            ctx.globalCompositeOperation = "source-over"; 
+            ctx.globalAlpha = 1.0;
+
+            // オーバーレイ画像を描画
+            const startX = ((overlayBounds.nw.lng - minLng) / totalLngWidth) * canvas.width;
+            const startY = ((maxLat - overlayBounds.nw.lat) / totalLatHeight) * canvas.height;
+            const endX = ((overlayBounds.se.lng - minLng) / totalLngWidth) * canvas.width;
+            const endY = ((maxLat - overlayBounds.se.lat) / totalLatHeight) * canvas.height;
+            
+            const drawW = endX - startX;
+            const drawH = endY - startY;
+
+            ctx.globalAlpha = currentOpacity;
+            ctx.drawImage(imgOverlay, startX, startY, drawW, drawH);
+            ctx.globalAlpha = 1.0; 
+
+            if (texture) {
+                texture.needsUpdate = true;
+            }
+        }
+
+        // 2. 各タイルの読み込みループ
+        for (let ty = minY; ty <= maxY; ty++) {
+            for (let tx = minX; tx <= maxX; tx++) {
+                const offsetX2x = (tx - minX) * 1024;
+                const offsetY2x = (ty - minY) * 1024;
+                const offsetX1x = (tx - minX) * 256;
+                const offsetY1x = (ty - minY) * 256;
+
+                // 陰影起伏図タイル (レベル12)
+                const imgHillshade = new Image();
+                imgHillshade.crossOrigin = "anonymous";
+                imgHillshade.src = `https://cyberjapandata.gsi.go.jp/xyz/hillshademap/${ZOOM}/${tx}/${ty}.png`;
+                imgHillshade.onload = () => {
+                    hillshadeCtx.drawImage(imgHillshade, offsetX2x, offsetY2x, 1024, 1024);
+                    checkProgress();
+                };
+
+                // DEMタイル (レベル12)
+                const imgDem = new Image();
+                imgDem.crossOrigin = "anonymous";
+                imgDem.src = `https://cyberjapandata.gsi.go.jp/xyz/dem_png/${ZOOM}/${tx}/${ty}.png`;
+                imgDem.onload = () => {
+                    demCtx.drawImage(imgDem, offsetX1x, offsetY1x, 256, 256);
+                    checkProgress();
+                };
+
+                // 標準地図タイルを拡張取得
+                const pMinX = tx * 4;
+                const pMinY = ty * 4;
+
+                for (let dy = 0; dy < 4; dy++) {
+                    for (let dx = 0; dx < 4; dx++) {
+                        const pTx = pMinX + dx;
+                        const pTy = pMinY + dy;
+                        
+                        const imgStd = new Image();
+                        imgStd.crossOrigin = "anonymous";
+                        imgStd.src = `https://cyberjapandata.gsi.go.jp/xyz/std/${STD_ZOOM}/${pTx}/${pTy}.png`;
+                        imgStd.onload = () => {
+                            const drawX = offsetX2x + (dx * 256);
+                            const drawY = offsetY2x + (dy * 256);
+                            stdCtx.drawImage(imgStd, drawX, drawY, 256, 256);
+                            checkProgress();
+                        };
+                    }
+                }
+            }
+        }
+
+        function checkProgress() {
+            loadedCount++;
+            if (loadedCount === totalTasks) {
+                updateTextureCanvas();
+                applyDataToTerrain();
+            }
+        }
+
+        function getElevation(r, g, b) {
+            const x = r * 65536 + g * 256 + b;
+            if (x < 8388608) {
+                return x * 0.01;
+            } else if (x > 8388608) {
+                return (x - 16777216) * 0.01;
+            } else {
+                return 0; 
+            }
+        }
+
+        function applyDataToTerrain() {
+            texture = new THREE.CanvasTexture(canvas);
+            texture.minFilter = THREE.LinearFilter;
+            texture.magFilter = THREE.LinearFilter;
+            material.map = texture;
+            material.needsUpdate = true;
+
+            const demData = demCtx.getImageData(0, 0, demCanvas.width, demCanvas.height).data;
+            const posAttr = geometry.attributes.position;
+
+            for (let i = 0; i < posAttr.count; i++) {
+                const vx = posAttr.getX(i);
+                const vz = posAttr.getZ(i);
+
+                const percentX = (vx + sceneWidth / 2) / sceneWidth;
+                const percentY = (vz + sceneHeight / 2) / sceneHeight;
+
+                const pixelX = Math.min(Math.floor(percentX * demCanvas.width), demCanvas.width - 1);
+                const pixelY = Math.min(Math.floor(percentY * demCanvas.height), demCanvas.height - 1);
+
+                const idx = (pixelY * demCanvas.width + pixelX) * 4;
+                const r = demData[idx];
+                const g = demData[idx + 1];
+                const b = demData[idx + 2];
+
+                let h = getElevation(r, g, b);
+                
+                if (Math.abs(vx - targetPos.x) < 2 && Math.abs(vz - targetPos.z) < 2) {
+                    baseTargetY = h * ELEVATION_SCALE;
+                }
+
+                posAttr.setY(i, h * ELEVATION_SCALE);
+            }
+
+            geometry.computeVertexNormals();
+            posAttr.needsUpdate = true;
+
+            updateCameraPosition();
+        }
+
+        // --- カメラ・UI制御 ---
+        const rotateSlider = document.getElementById('rotate-slider');
+        const heightSlider = document.getElementById('height-slider');
+        const zoomSlider = document.getElementById('zoom-slider');
+        const opacitySlider = document.getElementById('opacity-slider');
+
+        const labelRotate = document.getElementById('label-rotate');
+        const labelHeight = document.getElementById('label-height');
+        const labelZoom = document.getElementById('label-zoom');
+        const labelOpacity = document.getElementById('label-opacity');
+        
+        function updateCameraPosition() {
+            const cameraDistance = parseFloat(zoomSlider.value);
+            const verticalOffset = cameraDistance * Math.sin(Math.PI / 4); 
+            const horizontalRadius = cameraDistance * Math.cos(Math.PI / 4);
+
+            const angleDeg = parseFloat(rotateSlider.value);
+            const angleRad = (angleDeg * Math.PI) / 180;
+
+            const userHeightOffset = parseFloat(heightSlider.value);
+            const currentTargetY = baseTargetY + userHeightOffset;
+
+            const camX = targetPos.x + horizontalRadius * Math.sin(angleRad);
+            const camZ = targetPos.z + horizontalRadius * Math.cos(angleRad);
+            const camY = currentTargetY + verticalOffset;
+
+            camera.position.set(camX, camY, camZ);
+            camera.lookAt(targetPos.x, currentTargetY, targetPos.z);
+
+            labelRotate.innerText = `水平回転 (${angleDeg}度)`;
+            labelHeight.innerText = `上下移動 (${userHeightOffset >= 0 ? userHeightOffset : '－' + Math.abs(userHeightOffset)})`;
+            labelZoom.innerText = `拡大・縮小 (${cameraDistance})`;
+        }
+
+        rotateSlider.addEventListener('input', updateCameraPosition);
+        heightSlider.addEventListener('input', updateCameraPosition);
+        zoomSlider.addEventListener('input', updateCameraPosition);
+        
+        opacitySlider.addEventListener('input', () => {
+            labelOpacity.innerText = `透過度 (画像: ${opacitySlider.value}%)`;
+            updateTextureCanvas();
+        });
+
+        // --- アニメーションループ ---
+        function animate() {
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // --- リサイズ対応 ---
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
