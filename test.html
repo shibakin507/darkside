@@ -588,54 +588,95 @@ function handleLocationFound(position) {
 function handleLocationError(error) {
     console.error("位置情報の取得に失敗しました:", error);
 }
-
 /**
- * 緯度経度から3D空間内の座標(X, Y, Z)を計算し、マーカーを更新
+ * 緯度経度から3D空間内の座標(X, Y, Z)を計算し、矢印マーカーを更新
  */
 function updateUser3DPosition(lat, lng) {
     if (!terrainMesh) return;
 
     var b = currentTileBounds;
-    // タイル全体の中での相対ピクセル位置を計算
     var p = latLngToTileRelative(lat, lng, b.z, b.x1, b.y1);
     
     var totalW = (b.x2 - b.x1 + 1) * 256;
     var totalH = (b.y2 - b.y1 + 1) * 256;
 
-    // PlaneGeometry (標準は幅200, 高さ200*(h/w) で中心が 0,0) に対する比率計算
-    // Three.jsのPlaneは上がY+, 右がX+。WebのCanvasは下がY+, 右がX+なのでYの反転が必要
     var threeX = (p.x / totalW) * 200 - 100;
     var threeY = 100 * (totalH / totalW) - (p.y / totalH) * (200 * (totalH / totalW));
+    var threeZ = 10 * FIXED_H; 
 
-    // 現在地周辺の標高を計算（簡易的に最も近い頂点、または特定高度に配置）
-    // 今回は地形の少し上に浮くように固定値ベースかレイキャストが理想ですが、まずは基準のZ位置を設定
-    var threeZ = 10 * FIXED_H; // 初期仮高度（地形に合わせて調整可能）
-
-    // 地形頂点から現在位置直下の高さを簡易取得
+    // 地形頂点から現在位置直下の高さを取得
     var seg = 126;
     var ix = Math.round((p.x / totalW) * seg);
     var iy = Math.round((p.y / totalH) * seg);
     if (ix >= 0 && ix <= seg && iy >= 0 && iy <= seg) {
         var vertexIndex = iy * (seg + 1) + ix;
         if (rawHeights[vertexIndex] !== undefined) {
-            threeZ = (rawHeights[vertexIndex] * FIXED_H) + 2.0; // 地形より少し上に表示
+            threeZ = (rawHeights[vertexIndex] * FIXED_H) + 1.5; // 地形の少し上に配置
         }
     }
 
+    // マーカーが存在しない場合は、赤い矢印（3Dオブジェクト）を作成
     if (!userMarker) {
-        // 赤い球体の現在地マーカーを作成
-        var geometry = new THREE.SphereGeometry(3, 16, 16);
+        userMarker = new THREE.Group(); // 円錐と立方体をまとめるグループ
+
         var material = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-        userMarker = new THREE.Mesh(geometry, material);
+
+        // 矢印の頭（円錐：ConeGeometry）
+        // 引数: (底面の半径, 高さ, 放射状の分割数)
+        var coneGeom = new THREE.ConeGeometry(2, 5, 16);
+        var cone = new THREE.Mesh(coneGeom, material);
+        // Three.jsの標準で円錐はY軸の正の向きを向くため、進行方向（Y軸プラス方向）に合わせる
+        cone.position.y = 2.5; 
+        userMarker.add(cone);
+
+        // 矢印の軸（立方体：BoxGeometry）
+        // 引数: (幅, 高さ, 奥行き)
+        var boxGeom = new THREE.BoxGeometry(1, 4, 1);
+        var box = new THREE.Mesh(boxGeom, material);
+        box.position.y = -0.5;
+        userMarker.add(box);
+
+        // 地形に対して矢印が寝てしまわないよう、X軸を90度回転させて垂直に立たせる
+        userMarker.rotation.x = Math.PI / 2;
+
         scene.add(userMarker);
     }
 
     userMarker.position.set(threeX, threeY, threeZ);
-
-    // カメラの注視点をユーザー位置に追従させる場合（お好みでコメントアウトを解除）
-    // controls.target.set(threeX, threeY, threeZ);
 }
+/**
+ * 方位センサーのデータ処理と地図回転・マーカー回転
+ */
+function handleOrientation(e) {
+    if (!isNavActive) return;
+    
+    let heading = e.webkitCompassHeading || e.alpha;
+    if (!heading) return;
 
+    const diff = ((heading - currentBearing + 540) % 360) - 180;
+    currentBearing += diff * smooth;
+
+    var angleRad = (currentBearing * Math.PI) / 180;
+
+    // ★追加: ユーザーの矢印マーカーを進行方向（反時計回り）に回転させる
+    if (userMarker) {
+        // userMarker全体のrotation.y（立ち上げた状態での方位角）を同期
+        // headingが時計回り（北=0, 東=90）なのを、Three.jsの回転方向（反時計回り）に変換
+        userMarker.rotation.y = -angleRad;
+    }
+
+    // カメラの水平回転処理（既存のまま）
+    if (controls) {
+        var dx = camera.position.x - controls.target.x;
+        var dy = camera.position.y - controls.target.y;
+        var distanceSegment = Math.sqrt(dx * dx + dy * dy);
+
+        camera.position.x = controls.target.x - distanceSegment * Math.sin(angleRad);
+        camera.position.y = controls.target.y - distanceSegment * Math.cos(angleRad);
+        camera.lookAt(controls.target);
+    }
+}
+    
 /**
  * 方位センサーのアクセス許可申請[cite: 2]
  */
@@ -650,36 +691,6 @@ function requestOrientationPermission() {
     }
 }
 
-/**
- * 方位センサーのデータ処理と地図（カメラ）回転[cite: 2]
- */
-function handleOrientation(e) {
-    if (!isNavActive) return;
-    
-    let heading = e.webkitCompassHeading || e.alpha;
-    if (!heading) return;
-
-    // 進行方向（北を基準にした時計回りの角度）
-    // sample.htmlと同様の補間ロジックを適用[cite: 2]
-    const diff = ((heading - currentBearing + 540) % 360) - 180;
-    currentBearing += diff * smooth;
-
-    // Three.jsのカメラの水平回転を方位と同期させる
-    // TrackballControlsと競合するため、コントロールのターゲットを中心にカメラ位置を回転させます
-    if (controls) {
-        var angleRad = (currentBearing * Math.PI) / 180;
-        
-        // ターゲットからカメラへの距離を維持しつつ、水平方向の角度を更新
-        var dx = camera.position.x - controls.target.x;
-        var dy = camera.position.y - controls.target.y;
-        var distanceSegment = Math.sqrt(dx * dx + dy * dy);
-
-        // 方位角に応じてカメラを再配置（進行方向が常に画面「上」を向くように調整）
-        camera.position.x = controls.target.x - distanceSegment * Math.sin(angleRad);
-        camera.position.y = controls.target.y - distanceSegment * Math.cos(angleRad);
-        camera.lookAt(controls.target);
-    }
-}
 
 
 // ページ読み込み完了時の初期化処理
